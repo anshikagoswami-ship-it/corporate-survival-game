@@ -10,7 +10,10 @@ import {
 } from '../config/constants.js';
 
 import { INTERACTIONS } from '../config/interactions.js';
-import { EVENTS, EVENT_COOLDOWN_MS } from '../config/events.js';
+import {
+  EVENTS,
+  EVENT_COOLDOWN_MS,
+} from '../config/events.js';
 
 import {
   WALL_SEGMENTS,
@@ -27,9 +30,17 @@ import {
   RECOVERY_EVENT,
 } from '../config/workdays.js';
 
-import { buildOfficeVisuals } from '../graphics/OfficeVisuals.js';
-import { createEmployeeVisual } from '../graphics/EmployeeVisual.js';
-import { createNPCVisual } from '../graphics/NPCVisuals.js';
+import {
+  buildOfficeVisuals,
+} from '../graphics/OfficeVisuals.js';
+
+import {
+  createEmployeeVisual,
+} from '../graphics/EmployeeVisual.js';
+
+import {
+  createNPCVisual,
+} from '../graphics/NPCVisuals.js';
 
 import {
   createInteractionVisual,
@@ -40,6 +51,7 @@ import {
 import GameHUD from '../ui/GameHUD.js';
 import EventModal from '../ui/EventModal.js';
 import CareerSetup from '../ui/CareerSetup.js';
+import MobileControls from '../ui/MobileControls.js';
 
 import { PALETTE } from '../graphics/palette.js';
 
@@ -71,19 +83,69 @@ export default class OfficeScene extends Phaser.Scene {
     this.eventModal = new EventModal(this);
     this.careerSetup = new CareerSetup(this);
 
+    // Mobile controls.
+    this.mobileControls =
+      new MobileControls(this);
+
+    // Don't show mobile controls during
+    // career setup or name entry.
+    this.mobileControls.setVisible(false);
+
     // Keyboard.
-    this.cursors = this.input.keyboard.createCursorKeys();
+    this.cursors = {
+      up: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.UP,
+        false
+      ),
+    
+      down: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.DOWN,
+        false
+      ),
+    
+      left: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.LEFT,
+        false
+      ),
+    
+      right: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.RIGHT,
+        false
+      ),
+    };
+    
+    this.wasd = {
+      up: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.W,
+        false
+      ),
+    
+      down: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.S,
+        false
+      ),
+    
+      left: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.A,
+        false
+      ),
+    
+      right: this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.D,
+        false
+      ),
+    };
+    
+    this.interactKey =
+      this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.E,
+        false
+      );
 
-    this.wasd = this.input.keyboard.addKeys({
-      up: Phaser.Input.Keyboard.KeyCodes.W,
-      down: Phaser.Input.Keyboard.KeyCodes.S,
-      left: Phaser.Input.Keyboard.KeyCodes.A,
-      right: Phaser.Input.Keyboard.KeyCodes.D,
-    });
-
-    this.interactKey = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E
-    );
+    this.interactKey =
+      this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.E
+      );
 
     // World physics.
     this.physics.world.setBounds(
@@ -103,21 +165,18 @@ export default class OfficeScene extends Phaser.Scene {
       WORLD_W,
       WORLD_H
     );
-    
-    // Show a proper close-up of the office.
-    // The world is 1600x1200, while the viewport is 800x600.
+
     this.cameras.main.setZoom(1);
-    
+
     this.cameras.main.startFollow(
       this.player,
       true,
       0.08,
       0.08
     );
-    
+
     this.cameras.main.setRoundPixels(true);
 
-    // Start with the player centered.
     this.cameras.main.centerOn(
       this.player.x,
       this.player.y
@@ -125,7 +184,8 @@ export default class OfficeScene extends Phaser.Scene {
 
     this.refreshHUD();
 
-    // Show career creation before the workday begins.
+    // Show career creation before
+    // the workday begins.
     this.showCareerSetup();
   }
 
@@ -134,57 +194,81 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   createWalls() {
-    this.walls = this.physics.add.staticGroup();
+    this.walls =
+      this.physics.add.staticGroup();
 
-    WALL_SEGMENTS.forEach(([x, y, w, h]) => {
-      const wall = this.add
-        .rectangle(
-          x,
-          y,
+    WALL_SEGMENTS.forEach(
+      ([x, y, w, h]) => {
+        const wall =
+          this.add
+            .rectangle(
+              x,
+              y,
+              w,
+              h,
+              0x000000,
+              0
+            )
+            .setDepth(50);
+
+        this.physics.add.existing(
+          wall,
+          true
+        );
+
+        wall.body.setSize(
           w,
-          h,
-          0x000000,
+          h
+        );
+
+        wall.body.setOffset(
+          0,
           0
-        )
-        .setDepth(50);
+        );
 
-      this.physics.add.existing(
-        wall,
-        true
-      );
-
-      wall.body.setSize(w, h);
-      wall.body.setOffset(0, 0);
-
-      this.walls.add(wall);
-    });
+        this.walls.add(wall);
+      }
+    );
   }
 
   createDesks() {
-    this.obstacles = this.physics.add.staticGroup();
+    this.obstacles =
+      this.physics.add.staticGroup();
 
-    DESKS.forEach(([x, y, w, h]) => {
-      const desk = this.add
-        .rectangle(
-          x,
-          y,
+    DESKS.forEach(
+      ([x, y, w, h]) => {
+        const desk =
+          this.add
+            .rectangle(
+              x,
+              y,
+              w,
+              h,
+              0x000000,
+              0
+            )
+            .setDepth(50);
+
+        this.physics.add.existing(
+          desk,
+          true
+        );
+
+        desk.body.setSize(
           w,
-          h,
-          0x000000,
+          h
+        );
+
+        desk.body.setOffset(
+          0,
           0
-        )
-        .setDepth(50);
+        );
 
-      this.physics.add.existing(
-        desk,
-        true
-      );
-
-      desk.body.setSize(w, h);
-      desk.body.setOffset(0, 0);
-
-      this.obstacles.add(desk);
-    });
+        this.obstacles.add(
+          desk
+        );
+      }
+    );
   }
 
   // ─────────────────────────────────────────
@@ -192,14 +276,15 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   createPlayer() {
-    this.player = this.add.rectangle(
-      PLAYER_START.x,
-      PLAYER_START.y,
-      PLAYER_SIZE,
-      PLAYER_SIZE,
-      0x000000,
-      0
-    );
+    this.player =
+      this.add.rectangle(
+        PLAYER_START.x,
+        PLAYER_START.y,
+        PLAYER_SIZE,
+        PLAYER_SIZE,
+        0x000000,
+        0
+      );
 
     this.physics.add.existing(
       this.player
@@ -240,26 +325,39 @@ export default class OfficeScene extends Phaser.Scene {
 
   createInteractables() {
     INTERACTION_SPOTS.forEach(
-      ({ interactionId, x, y }) => {
+      ({
+        interactionId,
+        x,
+        y,
+      }) => {
         const data =
-          INTERACTIONS[interactionId];
+          INTERACTIONS[
+            interactionId
+          ];
 
-        const zone = this.add
-          .circle(
-            x,
-            y,
-            24,
-            0x000000,
-            0
-          )
-          .setDepth(50);
+        const zone =
+          this.add
+            .circle(
+              x,
+              y,
+              24,
+              0x000000,
+              0
+            )
+            .setDepth(50);
 
         this.physics.add.existing(
           zone
         );
 
-        zone.body.setCircle(24);
-        zone.body.setImmovable(true);
+        zone.body.setCircle(
+          24
+        );
+
+        zone.body.setImmovable(
+          true
+        );
+
         zone.body.moves = false;
 
         const visual =
@@ -286,16 +384,20 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   createNPCs() {
-    this.npcs = NPCS.map((npc) => ({
-      ...npc,
+    this.npcs =
+      NPCS.map(
+        (npc) => ({
+          ...npc,
 
-      visual: createNPCVisual(
-        this,
-        npc
-      ),
+          visual:
+            createNPCVisual(
+              this,
+              npc
+            ),
 
-      cooldownUntil: 0,
-    }));
+          cooldownUntil: 0,
+        })
+      );
   }
 
   // ─────────────────────────────────────────
@@ -311,10 +413,14 @@ export default class OfficeScene extends Phaser.Scene {
       this.state.formatClock(),
       profile && {
         day: this.state.day,
-        industry: profile.industry,
-        project: this.state.project,
+        industry:
+          profile.industry,
+        project:
+          this.state.project,
         situation:
-          this.state.currentSituation?.label,
+          this.state
+            .currentSituation
+            ?.label,
       }
     );
   }
@@ -330,7 +436,14 @@ export default class OfficeScene extends Phaser.Scene {
           profile
         );
 
-        this.startWorkday();
+        this.careerSetup.showNameInput(
+          (name) => {
+            this.state.playerName =
+              name;
+
+            this.startWorkday();
+          }
+        );
       }
     );
   }
@@ -356,8 +469,17 @@ export default class OfficeScene extends Phaser.Scene {
     }
 
     this.state.beginWorkday({
-      label: 'Explore the office',
+      label:
+        'Explore the office',
     });
+
+    // Mobile controls become available
+    // only once actual gameplay begins.
+    if (this.mobileControls) {
+      this.mobileControls.setVisible(
+        true
+      );
+    }
 
     this.refreshHUD();
 
@@ -379,7 +501,9 @@ export default class OfficeScene extends Phaser.Scene {
       return;
     }
 
-    this.state.tickClock(delta);
+    this.state.tickClock(
+      delta
+    );
 
     this.handleMovement();
 
@@ -417,59 +541,170 @@ export default class OfficeScene extends Phaser.Scene {
 
     body.setVelocity(0);
 
-    // Don't move while a choice/event is open.
-    if (this.eventModal.isOpen) {
+    // IMPORTANT:
+    // If an HTML input is focused,
+    // keyboard keys are for typing,
+    // not movement.
+    const activeElement =
+      document.activeElement;
+
+    const isTyping =
+      activeElement &&
+      (
+        activeElement.tagName ===
+          'INPUT' ||
+        activeElement.tagName ===
+          'TEXTAREA' ||
+        activeElement.isContentEditable
+      );
+
+    if (isTyping) {
       return;
     }
 
-    const left =
-      this.cursors.left.isDown ||
-      this.wasd.left.isDown;
-
-    const right =
-      this.cursors.right.isDown ||
-      this.wasd.right.isDown;
-
-    const up =
-      this.cursors.up.isDown ||
-      this.wasd.up.isDown;
-
-    const down =
-      this.cursors.down.isDown ||
-      this.wasd.down.isDown;
-
-    if (left) {
-      body.setVelocityX(
-        -PLAYER_SPEED
-      );
-    }
-
-    if (right) {
-      body.setVelocityX(
-        PLAYER_SPEED
-      );
-    }
-
-    if (up) {
-      body.setVelocityY(
-        -PLAYER_SPEED
-      );
-    }
-
-    if (down) {
-      body.setVelocityY(
-        PLAYER_SPEED
-      );
-    }
-
-    // Prevent diagonal movement from being faster.
+    // Don't move while an event
+    // is open.
     if (
-      body.velocity.x !== 0 &&
-      body.velocity.y !== 0
+      this.eventModal &&
+      this.eventModal.isOpen
     ) {
-      body.velocity
-        .normalize()
-        .scale(PLAYER_SPEED);
+      return;
+    }
+
+    let x = 0;
+    let y = 0;
+
+    // ─────────────────────────────────────
+    // DESKTOP KEYBOARD
+    // ─────────────────────────────────────
+
+    if (
+      this.cursors.left.isDown ||
+      this.wasd.left.isDown
+    ) {
+      x -= 1;
+    }
+
+    if (
+      this.cursors.right.isDown ||
+      this.wasd.right.isDown
+    ) {
+      x += 1;
+    }
+
+    if (
+      this.cursors.up.isDown ||
+      this.wasd.up.isDown
+    ) {
+      y -= 1;
+    }
+
+    if (
+      this.cursors.down.isDown ||
+      this.wasd.down.isDown
+    ) {
+      y += 1;
+    }
+
+    // ─────────────────────────────────────
+    // MOBILE JOYSTICK
+    // ─────────────────────────────────────
+
+    if (
+      this.mobileControls &&
+      this.mobileControls.isActive()
+    ) {
+      const vector =
+        this.mobileControls.getVector();
+
+      x = vector.x;
+      y = vector.y;
+    }
+
+    // Nothing pressed.
+    if (
+      x === 0 &&
+      y === 0
+    ) {
+      return;
+    }
+
+    // Normalize diagonal movement.
+    const length =
+      Math.sqrt(
+        x * x +
+        y * y
+      );
+
+    if (length > 1) {
+      x /= length;
+      y /= length;
+    }
+
+    body.setVelocity(
+      x * PLAYER_SPEED,
+      y * PLAYER_SPEED
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // MOBILE INTERACTION
+  // ─────────────────────────────────────────
+
+  interactNearby() {
+    if (
+      this.eventModal &&
+      this.eventModal.isOpen
+    ) {
+      return;
+    }
+
+    // Check nearby NPC first.
+    const nearbyNPC =
+      this.npcs.find(
+        (npc) =>
+          this.isNPCInteractionAvailable(
+            npc
+          ) &&
+          this.time.now >=
+            npc.cooldownUntil &&
+          Phaser.Math.Distance.Between(
+            this.player.x,
+            this.player.y,
+            npc.x,
+            npc.y
+          ) <= 70
+      );
+
+    if (nearbyNPC) {
+      this.triggerNPCInteraction(
+        nearbyNPC
+      );
+
+      return;
+    }
+
+    // Check nearby object.
+    const nearbyInteraction =
+      this.interactables.find(
+        (entry) =>
+          this.state.isInteractionAvailable(
+            entry.data.eventId
+          ) &&
+          this.time.now >=
+            entry.cooldownUntil &&
+          Phaser.Math.Distance.Between(
+            this.player.x,
+            this.player.y,
+            entry.zone.x,
+            entry.zone.y
+          ) <= 70
+      );
+
+    if (nearbyInteraction) {
+      this.triggerInteraction(
+        nearbyInteraction
+      );
     }
   }
 
@@ -478,7 +713,10 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   checkInteractions() {
-    if (this.eventModal.isOpen) {
+    if (
+      this.eventModal &&
+      this.eventModal.isOpen
+    ) {
       return;
     }
 
@@ -518,12 +756,17 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   checkNPCInteractions() {
-    if (this.eventModal.isOpen) {
-      this.npcs.forEach((npc) => {
-        npc.visual.prompt.setVisible(
-          false
-        );
-      });
+    if (
+      this.eventModal &&
+      this.eventModal.isOpen
+    ) {
+      this.npcs.forEach(
+        (npc) => {
+          npc.visual.prompt.setVisible(
+            false
+          );
+        }
+      );
 
       return;
     }
@@ -544,11 +787,13 @@ export default class OfficeScene extends Phaser.Scene {
           ) <= 46
       );
 
-    this.npcs.forEach((npc) => {
-      npc.visual.prompt.setVisible(
-        npc === nearbyNPC
-      );
-    });
+    this.npcs.forEach(
+      (npc) => {
+        npc.visual.prompt.setVisible(
+          npc === nearbyNPC
+        );
+      }
+    );
 
     if (
       nearbyNPC &&
@@ -562,8 +807,12 @@ export default class OfficeScene extends Phaser.Scene {
     }
   }
 
-  isNPCInteractionAvailable(npc) {
-    if (npc.id === 'rohit') {
+  isNPCInteractionAvailable(
+    npc
+  ) {
+    if (
+      npc.id === 'rohit'
+    ) {
       return (
         this.state.day === 1 &&
         !this.state.hasCompletedSituation(
@@ -572,7 +821,9 @@ export default class OfficeScene extends Phaser.Scene {
       );
     }
 
-    if (npc.id === 'priya') {
+    if (
+      npc.id === 'priya'
+    ) {
       return (
         this.state.day === 2 &&
         !this.state.hasCompletedSituation(
@@ -584,7 +835,9 @@ export default class OfficeScene extends Phaser.Scene {
     return true;
   }
 
-  triggerNPCInteraction(npc) {
+  triggerNPCInteraction(
+    npc
+  ) {
     npc.cooldownUntil =
       this.time.now +
       EVENT_COOLDOWN_MS;
@@ -661,7 +914,9 @@ export default class OfficeScene extends Phaser.Scene {
   // OBJECT EVENT
   // ─────────────────────────────────────────
 
-  triggerInteraction(entry) {
+  triggerInteraction(
+    entry
+  ) {
     entry.cooldownUntil =
       this.time.now +
       EVENT_COOLDOWN_MS;
@@ -679,7 +934,9 @@ export default class OfficeScene extends Phaser.Scene {
     );
 
     const event =
-      EVENTS[entry.data.eventId];
+      EVENTS[
+        entry.data.eventId
+      ];
 
     this.eventModal.show(
       event,
@@ -700,7 +957,10 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   checkScriptedEvents() {
-    if (this.eventModal.isOpen) {
+    if (
+      this.eventModal &&
+      this.eventModal.isOpen
+    ) {
       return;
     }
 
@@ -780,7 +1040,8 @@ export default class OfficeScene extends Phaser.Scene {
       changes,
       () => {
         this.state.currentSituation = {
-          label: 'Continue working',
+          label:
+            'Continue working',
         };
 
         this.refreshHUD();
@@ -831,23 +1092,24 @@ export default class OfficeScene extends Phaser.Scene {
         ? '#00b894'
         : '#d63031';
 
-    const text = this.add
-      .text(
-        this.player.x,
-        this.player.y - 24,
-        `${sign}${delta} ${stat}`,
-        {
-          fontFamily:
-            'Arial, Helvetica, sans-serif',
-          fontSize: '12px',
-          color,
-          fontStyle: 'bold',
-          stroke: '#ffffff',
-          strokeThickness: 2,
-        }
-      )
-      .setOrigin(0.5)
-      .setDepth(100);
+    const text =
+      this.add
+        .text(
+          this.player.x,
+          this.player.y - 24,
+          `${sign}${delta} ${stat}`,
+          {
+            fontFamily:
+              'Arial, Helvetica, sans-serif',
+            fontSize: '12px',
+            color,
+            fontStyle: 'bold',
+            stroke: '#ffffff',
+            strokeThickness: 2,
+          }
+        )
+        .setOrigin(0.5)
+        .setDepth(100);
 
     this.tweens.add({
       targets: text,
@@ -898,12 +1160,20 @@ export default class OfficeScene extends Phaser.Scene {
     title,
     message
   ) {
-    this.state.gameOver = true;
+    this.state.gameOver =
+      true;
 
-    this.player.body.setVelocity(0);
+    this.player.body.setVelocity(
+      0
+    );
 
-    // These are SCREEN coordinates,
-    // not world coordinates.
+    if (this.mobileControls) {
+      this.mobileControls.setVisible(
+        false
+      );
+    }
+
+    // Screen coordinates.
     const screenWidth =
       this.scale.width;
 
@@ -922,17 +1192,18 @@ export default class OfficeScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(200);
 
-    const panel = this.add
-      .rectangle(
-        screenWidth / 2,
-        screenHeight / 2,
-        420,
-        250,
-        PALETTE.hudPanel,
-        0.98
-      )
-      .setScrollFactor(0)
-      .setDepth(201);
+    const panel =
+      this.add
+        .rectangle(
+          screenWidth / 2,
+          screenHeight / 2,
+          420,
+          250,
+          PALETTE.hudPanel,
+          0.98
+        )
+        .setScrollFactor(0)
+        .setDepth(201);
 
     panel.setStrokeStyle(
       2,

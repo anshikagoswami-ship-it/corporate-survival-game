@@ -9,6 +9,10 @@ const config = {
 
   parent: 'game-container',
 
+  dom: {
+    createContainer: true,
+  },
+
   backgroundColor: '#f5f3ee',
 
   resolution: 2,
@@ -18,15 +22,33 @@ const config = {
     roundPixels: true,
   },
 
+  // IMPORTANT:
+  // Do not let Phaser prevent the browser from
+  // receiving keyboard input.
+  //
+  // This is especially important for HTML inputs
+  // such as the player's name field.
+  input: {
+    keyboard: {
+      capture: [],
+    },
+  },
+
   physics: {
     default: 'arcade',
+
     arcade: {
-      gravity: { y: 0 },
+      gravity: {
+        y: 0,
+      },
+
       debug: false,
     },
   },
 
-  scene: [OfficeScene],
+  scene: [
+    OfficeScene,
+  ],
 };
 
 new Phaser.Game(config);

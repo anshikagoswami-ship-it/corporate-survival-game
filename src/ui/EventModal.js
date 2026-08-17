@@ -1,14 +1,26 @@
+import Phaser from 'phaser';
+
 import { STAT_DISPLAY_NAMES } from '../config/events.js';
 import { PALETTE } from '../graphics/palette.js';
 
-const FONT = 'Arial, Helvetica, sans-serif';
+const FONT =
+  'Arial, Helvetica, sans-serif';
 
 export default class EventModal {
   constructor(scene) {
     this.scene = scene;
+
     this.container = null;
+
     this.onClose = null;
+
     this.consequenceText = null;
+
+    // We handle modal clicks at the scene level.
+    // This avoids Phaser Container hit-area issues.
+    this.pointerHandler = null;
+
+    this.buttonRegions = [];
   }
 
   get isOpen() {
@@ -22,136 +34,157 @@ export default class EventModal {
     };
   }
 
+  // ─────────────────────────────────────────
+  // SHOW EVENT
+  // ─────────────────────────────────────────
+
   show(event, onChoice) {
     this.close();
+
     this.onClose = null;
 
-    const { width: screenW, height: screenH } =
-      this.getScreenSize();
+    const {
+      width: screenW,
+      height: screenH,
+    } = this.getScreenSize();
 
-    const cx = screenW / 2;
-    const cy = screenH / 2;
+    const cx =
+      screenW / 2;
 
-    this.container = this.scene.add
-      .container(0, 0)
-      .setScrollFactor(0)
-      .setDepth(3000);
+    const cy =
+      screenH / 2;
 
-    /*
-     * =========================================================
-     * SCREEN OVERLAY
-     * =========================================================
-     */
+    this.container =
+      this.scene.add
+        .container(0, 0)
+        .setScrollFactor(0)
+        .setDepth(3000);
 
-    const overlay = this.scene.add
-      .rectangle(
-        cx,
-        cy,
-        screenW,
-        screenH,
-        0x17202A,
-        0.58
-      )
-      .setScrollFactor(0)
-      .setInteractive();
+    // ─────────────────────────────────────────
+    // OVERLAY
+    // ─────────────────────────────────────────
 
-    /*
-     * =========================================================
-     * MODAL PANEL
-     * =========================================================
-     */
+    const overlay =
+      this.scene.add
+        .rectangle(
+          cx,
+          cy,
+          screenW,
+          screenH,
+          0x17202A,
+          0.58
+        )
+        .setScrollFactor(0);
+
+    // IMPORTANT:
+    // Overlay is visual only.
+    // It is NOT interactive.
+
+    // ─────────────────────────────────────────
+    // MODAL DIMENSIONS
+    // ─────────────────────────────────────────
 
     const panelH =
       60 +
       event.choices.length * 48 +
       100;
 
-    const panelW = Math.min(
-      500,
-      screenW - 80
-    );
-
-    const panel = this.scene.add
-      .rectangle(
-        cx,
-        cy,
-        panelW,
-        panelH,
-        0xFFFDF8,
-        1
-      )
-      .setStrokeStyle(
-        2,
-        PALETTE.career
+    const panelW =
+      Math.min(
+        500,
+        screenW - 80
       );
 
-    /*
-     * =========================================================
-     * TITLE
-     * =========================================================
-     */
+    const panel =
+      this.scene.add
+        .rectangle(
+          cx,
+          cy,
+          panelW,
+          panelH,
+          0xFFFDF8,
+          1
+        )
+        .setStrokeStyle(
+          2,
+          PALETTE.career
+        );
 
-    const title = this.scene.add
-      .text(
-        cx,
-        cy - panelH / 2 + 30,
-        event.label.toUpperCase(),
-        {
-          fontFamily: FONT,
-          fontSize: '15px',
-          color: PALETTE.career,
-          fontStyle: 'bold',
-          letterSpacing: 2,
-        }
-      )
-      .setOrigin(0.5);
+    // ─────────────────────────────────────────
+    // TITLE
+    // ─────────────────────────────────────────
 
-    /*
-     * =========================================================
-     * SITUATION
-     * =========================================================
-     */
+    const title =
+      this.scene.add
+        .text(
+          cx,
+          cy -
+            panelH / 2 +
+            30,
+          event.label.toUpperCase(),
+          {
+            fontFamily: FONT,
+            fontSize: '15px',
+            color: PALETTE.career,
+            fontStyle: 'bold',
+            letterSpacing: 2,
+          }
+        )
+        .setOrigin(0.5);
 
-    const situation = this.scene.add
-      .text(
-        cx,
-        cy - panelH / 2 + 62,
-        event.situation,
-        {
-          fontFamily: FONT,
-          fontSize: '14px',
-          color: '#25313C',
-          align: 'center',
-          wordWrap: {
-            width: panelW - 60,
-          },
-          lineSpacing: 5,
-        }
-      )
-      .setOrigin(0.5, 0);
+    // ─────────────────────────────────────────
+    // SITUATION
+    // ─────────────────────────────────────────
 
-    /*
-     * =========================================================
-     * CONSEQUENCE TEXT
-     * =========================================================
-     */
+    const situation =
+      this.scene.add
+        .text(
+          cx,
+          cy -
+            panelH / 2 +
+            62,
+          event.situation,
+          {
+            fontFamily: FONT,
+            fontSize: '14px',
+            color: '#25313C',
+            align: 'center',
+            wordWrap: {
+              width:
+                panelW - 60,
+            },
+            lineSpacing: 5,
+          }
+        )
+        .setOrigin(
+          0.5,
+          0
+        );
 
-    this.consequenceText = this.scene.add
-      .text(
-        cx,
-        cy + panelH / 2 - 32,
-        '',
-        {
-          fontFamily: FONT,
-          fontSize: '11px',
-          color: '#B67C00',
-          align: 'center',
-          wordWrap: {
-            width: panelW - 50,
-          },
-        }
-      )
-      .setOrigin(0.5);
+    // ─────────────────────────────────────────
+    // CONSEQUENCE TEXT
+    // ─────────────────────────────────────────
+
+    this.consequenceText =
+      this.scene.add
+        .text(
+          cx,
+          cy +
+            panelH / 2 -
+            32,
+          '',
+          {
+            fontFamily: FONT,
+            fontSize: '11px',
+            color: '#B67C00',
+            align: 'center',
+            wordWrap: {
+              width:
+                panelW - 50,
+            },
+          }
+        )
+        .setOrigin(0.5);
 
     this.container.add([
       overlay,
@@ -161,178 +194,347 @@ export default class EventModal {
       this.consequenceText,
     ]);
 
-    /*
-     * =========================================================
-     * CHOICES
-     * =========================================================
-     */
+    // ─────────────────────────────────────────
+    // BUTTON REGIONS
+    // ─────────────────────────────────────────
+
+    this.buttonRegions = [];
 
     const startY =
       cy -
       panelH / 2 +
       108;
 
-    event.choices.forEach((choice, i) => {
-      const btnY =
-        startY +
-        i * 48;
+    event.choices.forEach(
+      (choice, index) => {
+        const btnY =
+          startY +
+          index * 48;
 
-      const btn = this.scene.add
-        .rectangle(
-          cx,
-          btnY,
-          panelW - 60,
-          38,
-          0xF7F8FA,
-          1
-        )
-        .setStrokeStyle(
-          1.5,
-          0xC9D0D8
-        )
-        .setInteractive({
-          useHandCursor: true,
+        const buttonWidth =
+          panelW - 60;
+
+        const buttonHeight =
+          40;
+
+        const left =
+          cx -
+          buttonWidth / 2;
+
+        const top =
+          btnY -
+          buttonHeight / 2;
+
+        // Store the actual screen-space
+        // clickable region.
+        this.buttonRegions.push({
+          left,
+          right:
+            left +
+            buttonWidth,
+
+          top,
+          bottom:
+            top +
+            buttonHeight,
+
+          choice,
+          index,
         });
 
-      const preview =
-        this.formatEffectsPreview(
-          choice.effects
-        );
+        // ─────────────────────────────────────
+        // BUTTON VISUAL
+        // ─────────────────────────────────────
 
-      const label = this.scene.add
-        .text(
-          cx,
-          btnY - (preview ? 5 : 0),
-          choice.text,
-          {
-            fontFamily: FONT,
-            fontSize: '12px',
-            color: '#25313C',
-            fontStyle: 'bold',
-            align: 'center',
-            wordWrap: {
-              width: panelW - 90,
-            },
-          }
-        )
-        .setOrigin(0.5);
+        const button =
+          this.scene.add
+            .rectangle(
+              cx,
+              btnY,
+              buttonWidth,
+              buttonHeight,
+              0xF7F8FA,
+              1
+            )
+            .setOrigin(0.5)
+            .setStrokeStyle(
+              1.5,
+              0xC9D0D8
+            );
 
-      this.container.add([
-        btn,
-        label,
-      ]);
+        const preview =
+          this.formatEffectsPreview(
+            choice.effects
+          );
 
-      /*
-       * Effects preview
-       */
+        const label =
+          this.scene.add
+            .text(
+              cx,
+              btnY -
+                (preview
+                  ? 5
+                  : 0),
+              choice.text,
+              {
+                fontFamily:
+                  FONT,
+                fontSize:
+                  '12px',
+                color:
+                  '#25313C',
+                fontStyle:
+                  'bold',
+                align:
+                  'center',
+                wordWrap: {
+                  width:
+                    panelW - 90,
+                },
+              }
+            )
+            .setOrigin(0.5);
 
-      if (preview) {
-        const hint = this.scene.add
-          .text(
-            cx,
-            btnY + 11,
-            preview,
-            {
-              fontFamily: FONT,
-              fontSize: '9px',
-              color: '#7B8490',
-            }
-          )
-          .setOrigin(0.5);
+        this.container.add([
+          button,
+          label,
+        ]);
 
-        this.container.add(hint);
+        // ─────────────────────────────────────
+        // EFFECT PREVIEW
+        // ─────────────────────────────────────
+
+        if (preview) {
+          const hint =
+            this.scene.add
+              .text(
+                cx,
+                btnY + 11,
+                preview,
+                {
+                  fontFamily:
+                    FONT,
+                  fontSize:
+                    '9px',
+                  color:
+                    '#7B8490',
+                }
+              )
+              .setOrigin(0.5);
+
+          this.container.add(
+            hint
+          );
+        }
+
+        // Store visual reference.
+        this.buttonRegions[
+          this.buttonRegions.length - 1
+        ].visual =
+          button;
       }
+    );
 
-      /*
-       * Hover
-       */
+    // ─────────────────────────────────────────
+    // GLOBAL POINTER HANDLER
+    // ─────────────────────────────────────────
 
-      btn.on(
-        'pointerover',
-        () => {
-          btn.setFillStyle(
-            0xEEF2F6,
-            1
+    this.pointerHandler =
+      (pointer) => {
+        if (
+          !this.container
+        ) {
+          return;
+        }
+
+        const x =
+          pointer.x;
+
+        const y =
+          pointer.y;
+
+        const region =
+          this.buttonRegions.find(
+            (button) =>
+              x >= button.left &&
+              x <= button.right &&
+              y >= button.top &&
+              y <= button.bottom
           );
+
+        if (!region) {
+          return;
         }
-      );
 
-      btn.on(
-        'pointerout',
-        () => {
-          btn.setFillStyle(
-            0xF7F8FA,
-            1
-          );
-        }
-      );
+        // Disable immediately so a double tap
+        // cannot trigger two choices.
+        const selectedChoice =
+          region.choice;
 
-      /*
-       * Selection
-       */
+        this.disableButtons();
 
-      btn.on(
-        'pointerdown',
-        () => {
-          if (!this.container) {
-            return;
-          }
+        onChoice(
+          selectedChoice
+        );
+      };
 
-          this.disableButtons();
+    this.scene.input.on(
+      'pointerdown',
+      this.pointerHandler
+    );
 
-          onChoice(choice);
-        }
-      );
-    });
+    // ─────────────────────────────────────────
+    // GLOBAL POINTER MOVE
+    // ─────────────────────────────────────────
+
+    this.scene.input.on(
+      'pointermove',
+      this.handlePointerMove,
+      this
+    );
   }
 
-  /*
-   * =========================================================
-   * DISABLE BUTTONS
-   * =========================================================
-   */
+  // ─────────────────────────────────────────
+  // HOVER
+  // ─────────────────────────────────────────
 
-  disableButtons() {
-    if (!this.container) {
+  handlePointerMove(pointer) {
+    if (
+      !this.container
+    ) {
       return;
     }
 
-    this.container.list.forEach(
-      (obj) => {
-        if (obj.input) {
-          obj.disableInteractive();
+    const x =
+      pointer.x;
+
+    const y =
+      pointer.y;
+
+    this.buttonRegions.forEach(
+      (region) => {
+        const inside =
+          x >= region.left &&
+          x <= region.right &&
+          y >= region.top &&
+          y <= region.bottom;
+
+        if (!region.visual) {
+          return;
+        }
+
+        if (inside) {
+          region.visual.setFillStyle(
+            0xE8F0F8,
+            1
+          );
+
+          region.visual.setStrokeStyle(
+            2,
+            PALETTE.career
+          );
+        } else {
+          region.visual.setFillStyle(
+            0xF7F8FA,
+            1
+          );
+
+          region.visual.setStrokeStyle(
+            1.5,
+            0xC9D0D8
+          );
         }
       }
     );
   }
 
-  /*
-   * =========================================================
-   * SHOW CONSEQUENCES
-   * =========================================================
-   */
+  // ─────────────────────────────────────────
+  // DISABLE BUTTONS
+  // ─────────────────────────────────────────
 
-  showConsequences(changes) {
-    if (!this.consequenceText) {
+  disableButtons() {
+    if (
+      !this.container
+    ) {
+      return;
+    }
+
+    this.buttonRegions.forEach(
+      (region) => {
+        if (
+          region.visual
+        ) {
+          region.visual.setFillStyle(
+            0xE5E7EB,
+            1
+          );
+
+          region.visual.setStrokeStyle(
+            1,
+            0xC9D0D8
+          );
+        }
+      }
+    );
+
+    this.removePointerHandlers();
+  }
+
+  // ─────────────────────────────────────────
+  // REMOVE POINTER HANDLERS
+  // ─────────────────────────────────────────
+
+  removePointerHandlers() {
+    if (
+      this.pointerHandler
+    ) {
+      this.scene.input.off(
+        'pointerdown',
+        this.pointerHandler
+      );
+
+      this.pointerHandler =
+        null;
+    }
+
+    this.scene.input.off(
+      'pointermove',
+      this.handlePointerMove,
+      this
+    );
+  }
+
+  // ─────────────────────────────────────────
+  // CONSEQUENCES
+  // ─────────────────────────────────────────
+
+  showConsequences(
+    changes
+  ) {
+    if (
+      !this.consequenceText
+    ) {
       return;
     }
 
     const lines =
       changes.map(
         (change) =>
-          this.formatChange(change)
+          this.formatChange(
+            change
+          )
       );
 
     this.consequenceText.setText(
-      lines.join('   •   ')
+      lines.join(
+        '   •   '
+      )
     );
   }
 
-  /*
-   * =========================================================
-   * CONSEQUENCE SCREEN
-   * =========================================================
-   */
+  // ─────────────────────────────────────────
+  // CONSEQUENCE SCREEN
+  // ─────────────────────────────────────────
 
   showConsequenceScreen(
     changes,
@@ -340,77 +542,72 @@ export default class EventModal {
   ) {
     this.close();
 
-    const { width: screenW, height: screenH } =
-      this.getScreenSize();
+    const {
+      width: screenW,
+      height: screenH,
+    } = this.getScreenSize();
 
-    const cx = screenW / 2;
-    const cy = screenH / 2;
+    const cx =
+      screenW / 2;
 
-    this.container = this.scene.add
-      .container(0, 0)
-      .setScrollFactor(0)
-      .setDepth(3000);
+    const cy =
+      screenH / 2;
 
-    /*
-     * Overlay
-     */
+    this.container =
+      this.scene.add
+        .container(0, 0)
+        .setScrollFactor(0)
+        .setDepth(3000);
 
-    const overlay = this.scene.add
-      .rectangle(
-        cx,
-        cy,
-        screenW,
-        screenH,
-        0x17202A,
-        0.58
-      )
-      .setInteractive();
+    // Overlay
+    const overlay =
+      this.scene.add
+        .rectangle(
+          cx,
+          cy,
+          screenW,
+          screenH,
+          0x17202A,
+          0.58
+        );
 
-    /*
-     * Panel
-     */
-
-    const panelW = Math.min(
-      500,
-      screenW - 80
-    );
-
-    const panel = this.scene.add
-      .rectangle(
-        cx,
-        cy,
-        panelW,
-        280,
-        0xFFFDF8,
-        1
-      )
-      .setStrokeStyle(
-        2,
-        PALETTE.confidence
+    // Panel
+    const panelW =
+      Math.min(
+        500,
+        screenW - 80
       );
 
-    /*
-     * Title
-     */
+    const panel =
+      this.scene.add
+        .rectangle(
+          cx,
+          cy,
+          panelW,
+          280,
+          0xFFFDF8,
+          1
+        )
+        .setStrokeStyle(
+          2,
+          PALETTE.confidence
+        );
 
-    const title = this.scene.add
-      .text(
-        cx,
-        cy - 92,
-        'YOUR DECISION',
-        {
-          fontFamily: FONT,
-          fontSize: '18px',
-          color: '#25313C',
-          fontStyle: 'bold',
-          letterSpacing: 2,
-        }
-      )
-      .setOrigin(0.5);
-
-    /*
-     * Consequences
-     */
+    const title =
+      this.scene.add
+        .text(
+          cx,
+          cy - 92,
+          'YOUR DECISION',
+          {
+            fontFamily: FONT,
+            fontSize: '18px',
+            color: '#25313C',
+            fontStyle: 'bold',
+            letterSpacing: 2,
+          }
+        )
+        .setOrigin(0.5);
 
     const consequenceText =
       this.scene.add
@@ -418,8 +615,11 @@ export default class EventModal {
           cx,
           cy - 20,
           changes
-            .map((change) =>
-              this.formatChange(change)
+            .map(
+              (change) =>
+                this.formatChange(
+                  change
+                )
             )
             .join('\n'),
           {
@@ -432,32 +632,38 @@ export default class EventModal {
         )
         .setOrigin(0.5);
 
-    /*
-     * Continue button
-     */
+    const buttonWidth =
+      180;
 
-    const button = this.scene.add
-      .rectangle(
-        cx,
-        cy + 82,
-        180,
-        42,
-        PALETTE.confidence,
-        1
-      )
-      .setStrokeStyle(
-        1,
-        0xFFFFFF
-      )
-      .setInteractive({
-        useHandCursor: true,
-      });
+    const buttonHeight =
+      42;
+
+    const buttonX =
+      cx;
+
+    const buttonY =
+      cy + 82;
+
+    const button =
+      this.scene.add
+        .rectangle(
+          buttonX,
+          buttonY,
+          buttonWidth,
+          buttonHeight,
+          PALETTE.confidence,
+          1
+        )
+        .setStrokeStyle(
+          1,
+          0xFFFFFF
+        );
 
     const buttonText =
       this.scene.add
         .text(
-          cx,
-          cy + 82,
+          buttonX,
+          buttonY,
           'CONTINUE',
           {
             fontFamily: FONT,
@@ -469,38 +675,6 @@ export default class EventModal {
         )
         .setOrigin(0.5);
 
-    button.on(
-      'pointerover',
-      () => {
-        button.setFillStyle(
-          0x26C99A,
-          1
-        );
-      }
-    );
-
-    button.on(
-      'pointerout',
-      () => {
-        button.setFillStyle(
-          PALETTE.confidence,
-          1
-        );
-      }
-    );
-
-    button.on(
-      'pointerdown',
-      () => {
-        if (!this.container) {
-          return;
-        }
-
-        this.close();
-        onContinue();
-      }
-    );
-
     this.container.add([
       overlay,
       panel,
@@ -509,18 +683,93 @@ export default class EventModal {
       button,
       buttonText,
     ]);
+
+    // Store continue button as a screen-space
+    // region and handle it with the same robust
+    // scene-level pointer system.
+    const left =
+      buttonX -
+      buttonWidth / 2;
+
+    const top =
+      buttonY -
+      buttonHeight / 2;
+
+    this.buttonRegions = [
+      {
+        left,
+        right:
+          left +
+          buttonWidth,
+        top,
+        bottom:
+          top +
+          buttonHeight,
+        choice: null,
+        visual: button,
+      },
+    ];
+
+    this.pointerHandler =
+      () => {
+        if (
+          !this.container
+        ) {
+          return;
+        }
+
+        // The handler below is replaced
+        // immediately after creation.
+      };
+
+    this.pointerHandler =
+      (pointer) => {
+        if (
+          !this.container
+        ) {
+          return;
+        }
+
+        const x =
+          pointer.x;
+
+        const y =
+          pointer.y;
+
+        if (
+          x >= left &&
+          x <=
+            left +
+              buttonWidth &&
+          y >= top &&
+          y <=
+            top +
+              buttonHeight
+        ) {
+          this.close();
+          onContinue();
+        }
+      };
+
+    this.scene.input.on(
+      'pointerdown',
+      this.pointerHandler
+    );
   }
 
-  /*
-   * =========================================================
-   * FORMATTING
-   * =========================================================
-   */
+  // ─────────────────────────────────────────
+  // FORMATTING
+  // ─────────────────────────────────────────
 
-  formatEffectsPreview(effects) {
-    return Object.entries(effects)
+  formatEffectsPreview(
+    effects
+  ) {
+    return Object.entries(
+      effects
+    )
       .filter(
-        ([, value]) => value !== 0
+        ([, value]) =>
+          value !== 0
       )
       .map(
         ([stat, delta]) =>
@@ -537,26 +786,30 @@ export default class EventModal {
     delta,
   }) {
     const sign =
-      delta > 0 ? '+' : '';
+      delta > 0
+        ? '+'
+        : '';
 
     const label =
-      stat === 'projectProgress'
+      stat ===
+      'projectProgress'
         ? 'Project Progress'
-        : STAT_DISPLAY_NAMES[stat];
+        : STAT_DISPLAY_NAMES[
+            stat
+          ];
 
     const suffix =
-      stat === 'projectProgress'
+      stat ===
+      'projectProgress'
         ? '%'
         : '';
 
     return `${label} ${sign}${delta}${suffix}`;
   }
 
-  /*
-   * =========================================================
-   * CLOSE AFTER
-   * =========================================================
-   */
+  // ─────────────────────────────────────────
+  // CLOSE AFTER
+  // ─────────────────────────────────────────
 
   closeAfter(
     delay,
@@ -574,18 +827,26 @@ export default class EventModal {
     );
   }
 
-  /*
-   * =========================================================
-   * CLOSE
-   * =========================================================
-   */
+  // ─────────────────────────────────────────
+  // CLOSE
+  // ─────────────────────────────────────────
 
   close() {
-    if (this.container) {
-      this.container.destroy(true);
+    this.removePointerHandlers();
+
+    this.buttonRegions = [];
+
+    if (
+      this.container
+    ) {
+      this.container.destroy(
+        true
+      );
+
       this.container = null;
     }
 
-    this.consequenceText = null;
+    this.consequenceText =
+      null;
   }
 }

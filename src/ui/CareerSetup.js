@@ -34,11 +34,8 @@ export default class CareerSetup {
     const selections = {};
     const buttons = {};
 
-    // IMPORTANT:
-    // UI uses screen coordinates, not world coordinates.
     const screenWidth = this.scene.scale.width;
     const screenHeight = this.scene.scale.height;
-
     const cx = screenWidth / 2;
 
     this.container = this.scene.add
@@ -61,7 +58,6 @@ export default class CareerSetup {
       )
     );
 
-    // Decorative circles
     this.addFixed(
       this.scene.add.circle(
         90,
@@ -206,9 +202,7 @@ export default class CareerSetup {
         48,
         0x20B486,
         1
-      );
-
-    startButton
+      )
       .setStrokeStyle(
         2,
         0xFFFFFF
@@ -231,14 +225,14 @@ export default class CareerSetup {
           letterSpacing: 1,
         }
       )
-        .setOrigin(0.5)
-        .setAlpha(0.55);
+      .setOrigin(0.5)
+      .setAlpha(0.55);
 
     this.addFixed(startButton);
     this.addFixed(startText);
 
     // ─────────────────────────────────────
-    // OPTIONS
+    // CAREER OPTIONS
     // ─────────────────────────────────────
 
     OPTIONS.forEach(
@@ -333,9 +327,8 @@ export default class CareerSetup {
               'pointerover',
               () => {
                 if (
-                  selections[
-                    group.key
-                  ] !== value
+                  selections[group.key] !==
+                  value
                 ) {
                   button.setFillStyle(
                     0xEEF2F6,
@@ -349,9 +342,8 @@ export default class CareerSetup {
               'pointerout',
               () => {
                 if (
-                  selections[
-                    group.key
-                  ] !== value
+                  selections[group.key] !==
+                  value
                 ) {
                   button.setFillStyle(
                     0xF7F8FA,
@@ -364,13 +356,10 @@ export default class CareerSetup {
             button.on(
               'pointerdown',
               () => {
-                selections[
-                  group.key
-                ] = value;
+                selections[group.key] =
+                  value;
 
-                buttons[
-                  group.key
-                ].forEach(
+                buttons[group.key].forEach(
                   ({
                     button: other,
                     text: otherText,
@@ -431,9 +420,7 @@ export default class CareerSetup {
               }
             );
 
-            buttons[
-              group.key
-            ].push({
+            buttons[group.key].push({
               button,
               text,
             });
@@ -490,6 +477,340 @@ export default class CareerSetup {
         onComplete(
           selections
         );
+      }
+    );
+  }
+
+  // ─────────────────────────────────────
+  // NAME INPUT
+  // ─────────────────────────────────────
+
+  showNameInput(onComplete) {
+    if (this.container) {
+      this.container.destroy(true);
+    }
+
+    this.container = this.scene.add
+      .container(0, 0)
+      .setScrollFactor(0)
+      .setDepth(2000);
+
+    const screenWidth =
+      this.scene.scale.width;
+
+    const screenHeight =
+      this.scene.scale.height;
+
+    const cx =
+      screenWidth / 2;
+
+    const cy =
+      screenHeight / 2;
+
+    // Background
+    this.addFixed(
+      this.scene.add.rectangle(
+        cx,
+        cy,
+        screenWidth,
+        screenHeight,
+        0xF5F3EE,
+        1
+      )
+    );
+
+    // Decorative circles
+    this.addFixed(
+      this.scene.add.circle(
+        80,
+        100,
+        130,
+        0xDCE8F5,
+        0.7
+      )
+    );
+
+    this.addFixed(
+      this.scene.add.circle(
+        screenWidth - 80,
+        screenHeight - 100,
+        170,
+        0xDDEFE8,
+        0.7
+      )
+    );
+
+    // Header
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        95,
+        'DAY 1',
+        {
+          fontFamily: FONT,
+          fontSize: '11px',
+          color: '#20A982',
+          fontStyle: 'bold',
+          letterSpacing: 2,
+        }
+      ).setOrigin(0.5)
+    );
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        130,
+        'FIRST THINGS FIRST',
+        {
+          fontFamily: FONT,
+          fontSize: '27px',
+          color: '#1F2933',
+          fontStyle: 'bold',
+        }
+      ).setOrigin(0.5)
+    );
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        165,
+        "What's your name?",
+        {
+          fontFamily: FONT,
+          fontSize: '16px',
+          color: '#667085',
+        }
+      ).setOrigin(0.5)
+    );
+
+    // Input background
+    const inputBg =
+      this.scene.add.rectangle(
+        cx,
+        245,
+        360,
+        54,
+        0xFFFFFF,
+        1
+      );
+
+    inputBg.setStrokeStyle(
+      2,
+      0xC9D0D8
+    );
+
+    this.addFixed(inputBg);
+
+    // Real HTML input
+    const input =
+      document.createElement('input');
+
+    input.type = 'text';
+    input.placeholder =
+      'Enter your name';
+    input.maxLength = 24;
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+
+    input.style.width = '320px';
+    input.style.height = '48px';
+    input.style.padding = '0 12px';
+    input.style.boxSizing = 'border-box';
+    input.style.border = 'none';
+    input.style.outline = 'none';
+    input.style.background =
+      'transparent';
+
+    input.style.fontFamily = FONT;
+    input.style.fontSize = '16px';
+    input.style.fontWeight = '500';
+    input.style.color = '#1F2933';
+    input.style.textAlign = 'center';
+
+    input.style.pointerEvents = 'auto';
+    input.style.userSelect = 'text';
+    input.style.webkitUserSelect = 'text';
+
+    const domInput =
+      this.scene.add.dom(
+        cx,
+        245,
+        input
+      );
+
+    domInput
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(2010);
+
+    // Keep the DOM input above the Phaser canvas.
+    this.scene.children.bringToTop(
+      domInput
+    );
+
+    // Instruction
+    const instruction =
+      this.scene.add.text(
+        cx,
+        325,
+        'This is the name your coworkers will know you by.',
+        {
+          fontFamily: FONT,
+          fontSize: '11px',
+          color: '#98A2B3',
+        }
+      ).setOrigin(0.5);
+
+    this.addFixed(
+      instruction
+    );
+
+    // Continue button
+    const continueButton =
+      this.scene.add.rectangle(
+        cx,
+        390,
+        240,
+        48,
+        0x20B486,
+        1
+      )
+      .setStrokeStyle(
+        2,
+        0xFFFFFF
+      )
+      .setInteractive({
+        useHandCursor: true,
+      })
+      .setAlpha(0.45);
+
+    const continueText =
+      this.scene.add.text(
+        cx,
+        390,
+        'CONTINUE  →',
+        {
+          fontFamily: FONT,
+          fontSize: '14px',
+          color: '#FFFFFF',
+          fontStyle: 'bold',
+          letterSpacing: 1,
+        }
+      )
+      .setOrigin(0.5)
+      .setAlpha(0.55);
+
+    this.addFixed(
+      continueButton
+    );
+
+    this.addFixed(
+      continueText
+    );
+
+    // Enable/disable Continue based on input
+    const updateButton =
+      () => {
+        const valid =
+          input.value
+            .trim()
+            .length > 0;
+
+        continueButton.setAlpha(
+          valid ? 1 : 0.45
+        );
+
+        continueText.setAlpha(
+          valid ? 1 : 0.55
+        );
+      };
+
+    input.addEventListener(
+      'input',
+      updateButton
+    );
+
+    // Button hover
+    continueButton.on(
+      'pointerover',
+      () => {
+        if (
+          input.value
+            .trim()
+            .length > 0
+        ) {
+          continueButton.setFillStyle(
+            0x26C99A,
+            1
+          );
+        }
+      }
+    );
+
+    continueButton.on(
+      'pointerout',
+      () => {
+        continueButton.setFillStyle(
+          0x20B486,
+          1
+        );
+      }
+    );
+
+    // Submit
+    const submit =
+      () => {
+        const name =
+          input.value.trim();
+
+        if (!name) {
+          input.focus();
+          return;
+        }
+
+        input.removeEventListener(
+          'input',
+          updateButton
+        );
+
+        input.remove();
+
+        if (domInput) {
+          domInput.destroy();
+        }
+
+        if (this.container) {
+          this.container.destroy(
+            true
+          );
+        }
+
+        this.container = null;
+
+        onComplete(name);
+      };
+
+    continueButton.on(
+      'pointerdown',
+      submit
+    );
+
+    input.addEventListener(
+      'keydown',
+      (event) => {
+        if (
+          event.key === 'Enter'
+        ) {
+          submit();
+        }
+      }
+    );
+
+    // Focus the input after the screen renders.
+    this.scene.time.delayedCall(
+      300,
+      () => {
+        input.focus();
       }
     );
   }
