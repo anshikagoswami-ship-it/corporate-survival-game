@@ -1,5 +1,5 @@
-export const WORLD_W = 800;
-export const WORLD_H = 600;
+export const WORLD_W = 1600;
+export const WORLD_H = 1200;
 
 export const PLAYER_SIZE = 24;
 export const PLAYER_SPEED = 160;

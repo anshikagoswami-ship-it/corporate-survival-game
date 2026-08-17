@@ -1,10 +1,21 @@
-import { WORLD_W, WORLD_H } from '../config/constants.js';
-import { PALETTE } from '../graphics/palette.js';
+const FONT = 'Arial, Helvetica, sans-serif';
 
 const OPTIONS = [
-  { key: 'stage', title: 'CAREER STAGE', values: ['Fresh Graduate', 'Mid-Level Professional', 'Senior Professional'] },
-  { key: 'industry', title: 'INDUSTRY', values: ['Technology'] },
-  { key: 'goal', title: 'CAREER GOAL', values: ['Career Growth', 'Leadership', 'Work-Life Balance'] },
+  {
+    key: 'stage',
+    title: 'WHO ARE YOU?',
+    values: ['Fresh Graduate', 'Mid-Level', 'Senior'],
+  },
+  {
+    key: 'industry',
+    title: 'WHERE DO YOU WORK?',
+    values: ['Technology'],
+  },
+  {
+    key: 'goal',
+    title: 'WHAT ARE YOU CHASING?',
+    values: ['Career Growth', 'Leadership', 'Work-Life Balance'],
+  },
 ];
 
 export default class CareerSetup {
@@ -13,63 +24,483 @@ export default class CareerSetup {
     this.container = null;
   }
 
+  addFixed(object) {
+    object.setScrollFactor(0);
+    this.container.add(object);
+    return object;
+  }
+
   show(onComplete) {
     const selections = {};
     const buttons = {};
-    const cx = WORLD_W / 2;
-    this.container = this.scene.add.container(0, 0).setScrollFactor(0).setDepth(400);
-    const overlay = this.scene.add.rectangle(cx, WORLD_H / 2, WORLD_W, WORLD_H, 0x000000, 0.7).setInteractive();
-    const panel = this.scene.add.rectangle(cx, WORLD_H / 2, 520, 420, PALETTE.hudPanel, 0.99);
-    panel.setStrokeStyle(2, PALETTE.career);
-    const title = this.scene.add.text(cx, 118, 'CAREER CREATION', {
-      fontSize: '24px', color: '#f1f2f6', fontStyle: 'bold', letterSpacing: 2,
-    }).setOrigin(0.5);
-    const subtitle = this.scene.add.text(cx, 148, 'Define the starting point for your career.', {
-      fontSize: '13px', color: PALETTE.textMuted,
-    }).setOrigin(0.5);
-    this.container.add([overlay, panel, title, subtitle]);
 
-    OPTIONS.forEach((group, groupIndex) => {
-      const y = 190 + groupIndex * 72;
-      const label = this.scene.add.text(170, y, group.title, {
-        fontSize: '11px', color: PALETTE.energy, fontStyle: 'bold', letterSpacing: 1,
-      }).setOrigin(0, 0.5);
-      this.container.add(label);
-      buttons[group.key] = [];
-      group.values.forEach((value, index) => {
-        const x = 330 + (index - (group.values.length - 1) / 2) * 118;
-        const width = group.values.length === 1 ? 170 : 108;
-        const button = this.scene.add.rectangle(x, y, width, 34, 0x1e272e, 0.95);
-        button.setStrokeStyle(1, PALETTE.wallHighlight).setInteractive({ useHandCursor: true });
-        const text = this.scene.add.text(x, y, value, {
-          fontSize: '9px', color: '#f1f2f6', align: 'center', wordWrap: { width: width - 12 },
-        }).setOrigin(0.5);
-        button.on('pointerdown', () => {
-          selections[group.key] = value;
-          buttons[group.key].forEach(({ button: other }) => other.setFillStyle(0x1e272e, 0.95));
-          button.setFillStyle(PALETTE.career, 0.9);
-          startButton.setAlpha(Object.keys(selections).length === OPTIONS.length ? 1 : 0.45);
-        });
-        buttons[group.key].push({ button, text });
-        this.container.add([button, text]);
-      });
-    });
+    // IMPORTANT:
+    // UI uses screen coordinates, not world coordinates.
+    const screenWidth = this.scene.scale.width;
+    const screenHeight = this.scene.scale.height;
 
-    const startButton = this.scene.add.rectangle(cx, 392, 220, 42, PALETTE.confidence, 0.95);
-    startButton.setStrokeStyle(1, 0xffffff).setInteractive({ useHandCursor: true }).setAlpha(0.45);
-    const startText = this.scene.add.text(cx, 392, 'START DAY 1', {
-      fontSize: '14px', color: '#ffffff', fontStyle: 'bold', letterSpacing: 1,
-    }).setOrigin(0.5);
-    startButton.on('pointerdown', () => {
-      if (Object.keys(selections).length !== OPTIONS.length) return;
-      this.close();
-      onComplete(selections);
-    });
-    this.container.add([startButton, startText]);
+    const cx = screenWidth / 2;
+
+    this.container = this.scene.add
+      .container(0, 0)
+      .setScrollFactor(0)
+      .setDepth(2000);
+
+    // ─────────────────────────────────────
+    // BACKGROUND
+    // ─────────────────────────────────────
+
+    this.addFixed(
+      this.scene.add.rectangle(
+        cx,
+        screenHeight / 2,
+        screenWidth,
+        screenHeight,
+        0xF5F3EE,
+        1
+      )
+    );
+
+    // Decorative circles
+    this.addFixed(
+      this.scene.add.circle(
+        90,
+        100,
+        130,
+        0xDCE8F5,
+        0.7
+      )
+    );
+
+    this.addFixed(
+      this.scene.add.circle(
+        screenWidth - 80,
+        screenHeight - 100,
+        180,
+        0xDDEFE8,
+        0.7
+      )
+    );
+
+    // ─────────────────────────────────────
+    // HEADER
+    // ─────────────────────────────────────
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        52,
+        'CORPORATE SURVIVAL',
+        {
+          fontFamily: FONT,
+          fontSize: '18px',
+          color: '#1F2933',
+          fontStyle: 'bold',
+          letterSpacing: 3,
+        }
+      ).setOrigin(0.5)
+    );
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        79,
+        'Build a career. Keep your sanity.',
+        {
+          fontFamily: FONT,
+          fontSize: '12px',
+          color: '#667085',
+        }
+      ).setOrigin(0.5)
+    );
+
+    // ─────────────────────────────────────
+    // MAIN CARD
+    // ─────────────────────────────────────
+
+    this.addFixed(
+      this.scene.add
+        .rectangle(
+          cx,
+          330,
+          600,
+          470,
+          0xFFFFFF,
+          1
+        )
+        .setStrokeStyle(
+          1,
+          0xD6DCE3
+        )
+    );
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        125,
+        'DAY 1',
+        {
+          fontFamily: FONT,
+          fontSize: '11px',
+          color: '#20A982',
+          fontStyle: 'bold',
+          letterSpacing: 2,
+        }
+      ).setOrigin(0.5)
+    );
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        153,
+        'Build your character',
+        {
+          fontFamily: FONT,
+          fontSize: '27px',
+          color: '#1F2933',
+          fontStyle: 'bold',
+        }
+      ).setOrigin(0.5)
+    );
+
+    this.addFixed(
+      this.scene.add.text(
+        cx,
+        181,
+        'Because apparently your career needs a character build.',
+        {
+          fontFamily: FONT,
+          fontSize: '12px',
+          color: '#667085',
+        }
+      ).setOrigin(0.5)
+    );
+
+    // ─────────────────────────────────────
+    // INSTRUCTION
+    // ─────────────────────────────────────
+
+    const instruction =
+      this.scene.add.text(
+        cx,
+        440,
+        'Choose one option from each row.',
+        {
+          fontFamily: FONT,
+          fontSize: '11px',
+          color: '#98A2B3',
+        }
+      ).setOrigin(0.5);
+
+    this.addFixed(instruction);
+
+    // ─────────────────────────────────────
+    // START BUTTON
+    // ─────────────────────────────────────
+
+    const startButton =
+      this.scene.add.rectangle(
+        cx,
+        490,
+        240,
+        48,
+        0x20B486,
+        1
+      );
+
+    startButton
+      .setStrokeStyle(
+        2,
+        0xFFFFFF
+      )
+      .setInteractive({
+        useHandCursor: true,
+      })
+      .setAlpha(0.45);
+
+    const startText =
+      this.scene.add.text(
+        cx,
+        490,
+        'START DAY 1  →',
+        {
+          fontFamily: FONT,
+          fontSize: '14px',
+          color: '#FFFFFF',
+          fontStyle: 'bold',
+          letterSpacing: 1,
+        }
+      )
+        .setOrigin(0.5)
+        .setAlpha(0.55);
+
+    this.addFixed(startButton);
+    this.addFixed(startText);
+
+    // ─────────────────────────────────────
+    // OPTIONS
+    // ─────────────────────────────────────
+
+    OPTIONS.forEach(
+      (group, groupIndex) => {
+        const y =
+          225 + groupIndex * 82;
+
+        const label =
+          this.scene.add.text(
+            125,
+            y - 18,
+            group.title,
+            {
+              fontFamily: FONT,
+              fontSize: '10px',
+              color: '#D29F24',
+              fontStyle: 'bold',
+              letterSpacing: 1.5,
+            }
+          ).setOrigin(0, 0.5);
+
+        this.addFixed(label);
+
+        buttons[group.key] = [];
+
+        const count =
+          group.values.length;
+
+        const buttonWidth =
+          count === 1
+            ? 300
+            : 135;
+
+        const gap = 10;
+
+        const totalWidth =
+          count * buttonWidth +
+          (count - 1) * gap;
+
+        const startX =
+          cx - totalWidth / 2;
+
+        group.values.forEach(
+          (value, index) => {
+            const x =
+              startX +
+              buttonWidth / 2 +
+              index *
+                (buttonWidth + gap);
+
+            const button =
+              this.scene.add.rectangle(
+                x,
+                y + 12,
+                buttonWidth,
+                42,
+                0xF7F8FA,
+                1
+              );
+
+            button
+              .setStrokeStyle(
+                1.5,
+                0xC9D0D8
+              )
+              .setInteractive({
+                useHandCursor: true,
+              });
+
+            const text =
+              this.scene.add.text(
+                x,
+                y + 12,
+                value,
+                {
+                  fontFamily: FONT,
+                  fontSize: '11px',
+                  color: '#344054',
+                  fontStyle: 'bold',
+                  align: 'center',
+                  wordWrap: {
+                    width:
+                      buttonWidth - 18,
+                  },
+                }
+              ).setOrigin(0.5);
+
+            this.addFixed(button);
+            this.addFixed(text);
+
+            button.on(
+              'pointerover',
+              () => {
+                if (
+                  selections[
+                    group.key
+                  ] !== value
+                ) {
+                  button.setFillStyle(
+                    0xEEF2F6,
+                    1
+                  );
+                }
+              }
+            );
+
+            button.on(
+              'pointerout',
+              () => {
+                if (
+                  selections[
+                    group.key
+                  ] !== value
+                ) {
+                  button.setFillStyle(
+                    0xF7F8FA,
+                    1
+                  );
+                }
+              }
+            );
+
+            button.on(
+              'pointerdown',
+              () => {
+                selections[
+                  group.key
+                ] = value;
+
+                buttons[
+                  group.key
+                ].forEach(
+                  ({
+                    button: other,
+                    text: otherText,
+                  }) => {
+                    other.setFillStyle(
+                      0xF7F8FA,
+                      1
+                    );
+
+                    other.setStrokeStyle(
+                      1.5,
+                      0xC9D0D8
+                    );
+
+                    otherText.setColor(
+                      '#344054'
+                    );
+                  }
+                );
+
+                button.setFillStyle(
+                  0x4C8DDE,
+                  1
+                );
+
+                button.setStrokeStyle(
+                  2,
+                  0x2F6FB8
+                );
+
+                text.setColor(
+                  '#FFFFFF'
+                );
+
+                const complete =
+                  Object.keys(
+                    selections
+                  ).length ===
+                  OPTIONS.length;
+
+                startButton.setAlpha(
+                  complete
+                    ? 1
+                    : 0.45
+                );
+
+                startText.setAlpha(
+                  complete
+                    ? 1
+                    : 0.55
+                );
+
+                instruction.setText(
+                  complete
+                    ? 'Good luck. You are going to need it.'
+                    : 'Choose one option from each row.'
+                );
+              }
+            );
+
+            buttons[
+              group.key
+            ].push({
+              button,
+              text,
+            });
+          }
+        );
+      }
+    );
+
+    // ─────────────────────────────────────
+    // START BUTTON EVENTS
+    // ─────────────────────────────────────
+
+    startButton.on(
+      'pointerover',
+      () => {
+        if (
+          Object.keys(
+            selections
+          ).length ===
+          OPTIONS.length
+        ) {
+          startButton.setFillStyle(
+            0x26C99A,
+            1
+          );
+        }
+      }
+    );
+
+    startButton.on(
+      'pointerout',
+      () => {
+        startButton.setFillStyle(
+          0x20B486,
+          1
+        );
+      }
+    );
+
+    startButton.on(
+      'pointerdown',
+      () => {
+        if (
+          Object.keys(
+            selections
+          ).length !==
+          OPTIONS.length
+        ) {
+          return;
+        }
+
+        this.close();
+
+        onComplete(
+          selections
+        );
+      }
+    );
   }
 
   close() {
-    if (this.container) this.container.destroy(true);
+    if (this.container) {
+      this.container.destroy(
+        true
+      );
+    }
+
     this.container = null;
   }
 }

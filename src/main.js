@@ -3,10 +3,21 @@ import OfficeScene from './scenes/OfficeScene.js';
 
 const config = {
   type: Phaser.AUTO,
+
   width: 800,
   height: 600,
+
   parent: 'game-container',
-  backgroundColor: '#1a1a2e',
+
+  backgroundColor: '#f5f3ee',
+
+  resolution: 2,
+
+  render: {
+    antialias: true,
+    roundPixels: true,
+  },
+
   physics: {
     default: 'arcade',
     arcade: {
@@ -14,6 +25,7 @@ const config = {
       debug: false,
     },
   },
+
   scene: [OfficeScene],
 };
 

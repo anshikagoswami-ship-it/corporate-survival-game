@@ -1,95 +1,393 @@
-import { WORLD_W, WORLD_H, WALL_THICKNESS } from './constants.js';
+import {
+  WORLD_W,
+  WORLD_H,
+  WALL_THICKNESS,
+} from './constants.js';
 
-export const DOOR_WIDTH = 72;
+export const DOOR_WIDTH = 110;
 export const DOOR_HALF = DOOR_WIDTH / 2;
 
 const MID_X = WORLD_W / 2;
 const MID_Y = WORLD_H / 2;
+
 const T = WALL_THICKNESS;
 
-// Doorway centers — one per internal wall edge.
+// ─────────────────────────────────────────────
+// DOORS
+// ─────────────────────────────────────────────
+//
+// The office is:
+//
+// ┌───────────────────────┬───────────────────────┐
+// │                       │                       │
+// │      DESK AREA        │     MEETING ROOM      │
+// │                       │                       │
+// ├───────────────┬───────┼───────┬───────────────┤
+// │               │       │       │               │
+// │    PANTRY     │       │       │    MANAGER    │
+// │               │       │       │               │
+// └───────────────────────┴───────────────────────┘
+//
+// You can move between all four rooms.
+//
+
 export const DOORWAYS = [
-  { x: MID_X, y: 150, label: 'work-meeting' },   // Work ↔ Meeting
-  { x: MID_X, y: 450, label: 'pantry-manager' }, // Pantry ↔ Manager
-  { x: 200, y: MID_Y, label: 'work-pantry' },    // Work ↔ Pantry
-  { x: 600, y: MID_Y, label: 'meeting-manager' }, // Meeting ↔ Manager
+  // Desk ↔ Meeting
+  {
+    x: MID_X,
+    y: 220,
+    label: 'work-meeting',
+  },
+
+  // Pantry ↔ Manager
+  {
+    x: MID_X,
+    y: 980,
+    label: 'pantry-manager',
+  },
+
+  // Desk ↔ Pantry
+  {
+    x: 300,
+    y: MID_Y,
+    label: 'work-pantry',
+  },
+
+  // Meeting ↔ Manager
+  {
+    x: 1300,
+    y: MID_Y,
+    label: 'meeting-manager',
+  },
 ];
+
+// ─────────────────────────────────────────────
+// ROOMS
+// ─────────────────────────────────────────────
 
 export const ROOMS = [
   {
     id: 'desk',
     label: 'Desk Area',
+
     x: 0,
     y: 0,
-    w: WORLD_W / 2,
-    h: WORLD_H / 2,
-    floorColor: 0xdfe6e9,
+
+    w: MID_X,
+    h: MID_Y,
+
+    floorColor: 0xe7edf1,
   },
+
   {
     id: 'meeting',
     label: 'Meeting Room',
-    x: WORLD_W / 2,
+
+    x: MID_X,
     y: 0,
-    w: WORLD_W / 2,
-    h: WORLD_H / 2,
-    floorColor: 0xe8daef,
+
+    w: MID_X,
+    h: MID_Y,
+
+    floorColor: 0xe9e1f2,
   },
+
   {
     id: 'pantry',
     label: 'Pantry',
+
     x: 0,
-    y: WORLD_H / 2,
-    w: WORLD_W / 2,
-    h: WORLD_H / 2,
-    floorColor: 0xffeaa7,
+    y: MID_Y,
+
+    w: MID_X,
+    h: MID_Y,
+
+    floorColor: 0xffedbd,
   },
+
   {
     id: 'manager',
     label: "Manager's Area",
-    x: WORLD_W / 2,
-    y: WORLD_H / 2,
-    w: WORLD_W / 2,
-    h: WORLD_H / 2,
-    floorColor: 0xfab1a0,
+
+    x: MID_X,
+    y: MID_Y,
+
+    w: MID_X,
+    h: MID_Y,
+
+    floorColor: 0xf6c4b7,
   },
 ];
 
-// [centerX, centerY, width, height] — solid wall segments only (doorways left open).
+// ─────────────────────────────────────────────
+// WALLS
+// ─────────────────────────────────────────────
+//
+// Outer walls + internal walls with door gaps.
+//
+
 export const WALL_SEGMENTS = [
-  // Outer walls
-  [MID_X, T / 2, WORLD_W, T],
-  [MID_X, WORLD_H - T / 2, WORLD_W, T],
-  [T / 2, MID_Y, T, WORLD_H],
-  [WORLD_W - T / 2, MID_Y, T, WORLD_H],
+  // ─────────────────────────
+  // OUTER WALLS
+  // ─────────────────────────
 
-  // Vertical divider at x = MID_X — gaps at top (y≈150) and bottom (y≈450)
-  [MID_X, (T + 150 - DOOR_HALF) / 2, T, 150 - DOOR_HALF - T],
-  [MID_X, (150 + DOOR_HALF + 450 - DOOR_HALF) / 2, T, 450 - DOOR_HALF - (150 + DOOR_HALF)],
-  [MID_X, (450 + DOOR_HALF + WORLD_H - T) / 2, T, WORLD_H - T - (450 + DOOR_HALF)],
+  // Top
+  [
+    MID_X,
+    T / 2,
+    WORLD_W,
+    T,
+  ],
 
-  // Horizontal divider at y = MID_Y — gaps at left (x≈200) and right (x≈600)
-  [(T + 200 - DOOR_HALF) / 2, MID_Y, 200 - DOOR_HALF - T, T],
-  [(200 + DOOR_HALF + 600 - DOOR_HALF) / 2, MID_Y, 600 - DOOR_HALF - (200 + DOOR_HALF), T],
-  [(600 + DOOR_HALF + WORLD_W - T) / 2, MID_Y, WORLD_W - T - (600 + DOOR_HALF), T],
+  // Bottom
+  [
+    MID_X,
+    WORLD_H - T / 2,
+    WORLD_W,
+    T,
+  ],
+
+  // Left
+  [
+    T / 2,
+    MID_Y,
+    T,
+    WORLD_H,
+  ],
+
+  // Right
+  [
+    WORLD_W - T / 2,
+    MID_Y,
+    T,
+    WORLD_H,
+  ],
+
+  // ─────────────────────────
+  // VERTICAL INTERNAL WALL
+  // x = MID_X
+  //
+  // Door at y = 220
+  // Door at y = 980
+  // ─────────────────────────
+
+  // Top → first door
+  [
+    MID_X,
+    (T + 220 - DOOR_HALF) / 2,
+    T,
+    220 - DOOR_HALF - T,
+  ],
+
+  // Between doors
+  [
+    MID_X,
+    (
+      220 +
+      DOOR_HALF +
+      980 -
+      DOOR_HALF
+    ) / 2,
+
+    T,
+
+    980 -
+    DOOR_HALF -
+    (220 + DOOR_HALF),
+  ],
+
+  // Second door → bottom
+  [
+    MID_X,
+    (
+      980 +
+      DOOR_HALF +
+      WORLD_H -
+      T
+    ) / 2,
+
+    T,
+
+    WORLD_H -
+    T -
+    (980 + DOOR_HALF),
+  ],
+
+  // ─────────────────────────
+  // HORIZONTAL INTERNAL WALL
+  // y = MID_Y
+  //
+  // Door at x = 300
+  // Door at x = 1300
+  // ─────────────────────────
+
+  // Left edge → first door
+  [
+    (T + 300 - DOOR_HALF) / 2,
+
+    MID_Y,
+
+    300 -
+    DOOR_HALF -
+    T,
+
+    T,
+  ],
+
+  // Between doors
+  [
+    (
+      300 +
+      DOOR_HALF +
+      1300 -
+      DOOR_HALF
+    ) / 2,
+
+    MID_Y,
+
+    1300 -
+    DOOR_HALF -
+    (300 + DOOR_HALF),
+
+    T,
+  ],
+
+  // Second door → right edge
+  [
+    (
+      1300 +
+      DOOR_HALF +
+      WORLD_W -
+      T
+    ) / 2,
+
+    MID_Y,
+
+    WORLD_W -
+    T -
+    (1300 + DOOR_HALF),
+
+    T,
+  ],
 ];
+
+// ─────────────────────────────────────────────
+// DESKS
+// ─────────────────────────────────────────────
+//
+// More furniture so the large room doesn't feel empty.
+//
 
 export const DESKS = [
-  [120, 120, 80, 50],
-  [260, 120, 80, 50],
-  [120, 210, 80, 50],
+  // Desk Area
+  [140, 150, 120, 65],
+  [340, 150, 120, 65],
+  [540, 150, 120, 65],
+
+  [140, 300, 120, 65],
+  [340, 300, 120, 65],
+  [540, 300, 120, 65],
+
+  [140, 450, 120, 65],
+  [340, 450, 120, 65],
+  [540, 450, 120, 65],
+
+  // Pantry furniture
+  [150, 800, 180, 90],
+  [470, 820, 150, 70],
+
+  // Manager's desk
+  [1100, 820, 240, 100],
+
+  // Meeting table
+  [1050, 260, 300, 130],
 ];
+
+// ─────────────────────────────────────────────
+// INTERACTION SPOTS
+// ─────────────────────────────────────────────
 
 export const INTERACTION_SPOTS = [
-  { interactionId: 'work', x: 300, y: 220 },
-  { interactionId: 'meeting', x: 600, y: 150 },
-  { interactionId: 'pantry', x: 200, y: 450 },
+  // Work task
+  {
+    interactionId: 'work',
+    x: 520,
+    y: 450,
+  },
+
+  // Meeting room
+  {
+    interactionId: 'meeting',
+    x: 1200,
+    y: 320,
+  },
+
+  // Pantry
+  {
+    interactionId: 'pantry',
+    x: 380,
+    y: 850,
+  },
 ];
+
+// ─────────────────────────────────────────────
+// NPCS
+// ─────────────────────────────────────────────
 
 export const NPCS = [
-  { id: 'rohit', name: 'Rohit', role: 'manager', eventId: 'manager', x: 700, y: 500 },
-  { id: 'priya', name: 'Priya', role: 'coworker', eventId: 'coworker', x: 340, y: 100 },
-  { id: 'hr', name: 'HR', role: 'hr', eventId: 'hr', x: 700, y: 230 },
-  { id: 'kabir', name: 'Kabir', role: 'pantryCoworker', eventId: 'kabir', x: 300, y: 400 },
+  // Manager
+  {
+    id: 'rohit',
+    name: 'Rohit',
+    role: 'manager',
+    eventId: 'manager',
+
+    x: 1380,
+    y: 900,
+  },
+
+  // Coworker
+  {
+    id: 'priya',
+    name: 'Priya',
+    role: 'coworker',
+    eventId: 'coworker',
+
+    x: 560,
+    y: 180,
+  },
+
+  // HR
+  {
+    id: 'hr',
+    name: 'HR',
+    role: 'hr',
+    eventId: 'hr',
+
+    x: 1390,
+    y: 250,
+  },
+
+  // Pantry coworker
+  {
+    id: 'kabir',
+    name: 'Kabir',
+    role: 'pantryCoworker',
+    eventId: 'kabir',
+
+    x: 520,
+    y: 850,
+  },
 ];
 
-export const PLAYER_START = { x: 80, y: 80 };
+// ─────────────────────────────────────────────
+// PLAYER START
+// ─────────────────────────────────────────────
+//
+// Start comfortably inside the Desk Area.
+//
+
+export const PLAYER_START = {
+  x: 260,
+  y: 250,
+};
