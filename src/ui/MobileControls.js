@@ -51,12 +51,12 @@ export default class MobileControls {
 
     // Reset when the scene shuts down or restarts
     this.scene.events.on('shutdown', this.resetJoystick, this);
+
+    // Reposition joystick circles dynamically on viewport resize
+    this.scene.scale.on('resize', this.updateLayout, this);
   }
 
   create() {
-    const width  = this.scene.scale.width;
-    const height = this.scene.scale.height;
-
     this.container = this.scene.add
       .container(0, 0)
       .setScrollFactor(0)
@@ -66,14 +66,11 @@ export default class MobileControls {
     // JOYSTICK
     // ─────────────────────────────────────
 
-    const margin = this.radius + 18;
-    const joystickX = margin;
-    const joystickY = height - margin;
-
+    // Created at origin (0, 0); updateLayout positions them on create and resize.
     this.joystickBase =
       this.scene.add.circle(
-        joystickX,
-        joystickY,
+        0,
+        0,
         this.radius,
         0x1F2933,
         0.35
@@ -87,8 +84,8 @@ export default class MobileControls {
 
     this.joystickThumb =
       this.scene.add.circle(
-        joystickX,
-        joystickY,
+        0,
+        0,
         this.thumbRadius,
         0xFFFFFF,
         0.85
@@ -99,6 +96,9 @@ export default class MobileControls {
       this.joystickThumb,
     ]);
 
+    // Position circles initially
+    this.updateLayout();
+
     // ─────────────────────────────────────
     // SCENE INPUT POINTER EVENTS
     // ─────────────────────────────────────
@@ -107,6 +107,23 @@ export default class MobileControls {
     this.scene.input.on('pointerup', this.handlePointerUp, this);
     this.scene.input.on('pointercancel', this.handlePointerUp, this);
     this.scene.input.on('gameout', this.handleGameOut, this);
+  }
+
+  updateLayout() {
+    if (!this.container || !this.joystickBase || !this.joystickThumb) {
+      return;
+    }
+
+    // Reset joystick inputs immediately so no stuck input survives the orientation change
+    this.resetJoystick();
+
+    const height = this.scene.scale.height;
+    const margin = this.radius + 18;
+    const joystickX = margin;
+    const joystickY = height - margin;
+
+    this.joystickBase.setPosition(joystickX, joystickY);
+    this.joystickThumb.setPosition(joystickX, joystickY);
   }
 
   handlePointerDown(pointer) {
@@ -265,6 +282,7 @@ export default class MobileControls {
 
     // Clean up Phaser scene events
     this.scene.events.off('shutdown', this.resetJoystick, this);
+    this.scene.scale.off('resize', this.updateLayout, this);
     this.scene.input.off('pointerdown', this.handlePointerDown, this);
     this.scene.input.off('pointermove', this.handlePointerMove, this);
     this.scene.input.off('pointerup', this.handlePointerUp, this);
