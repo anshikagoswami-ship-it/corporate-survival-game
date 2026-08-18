@@ -55,6 +55,8 @@ import MobileControls from '../ui/MobileControls.js';
 
 import { PALETTE } from '../graphics/palette.js';
 
+const FONT = 'Arial, Helvetica, sans-serif';
+
 export default class OfficeScene extends Phaser.Scene {
   constructor() {
     super('OfficeScene');
@@ -464,15 +466,10 @@ export default class OfficeScene extends Phaser.Scene {
   showCareerSetup() {
     this.careerSetup.show(
       (profile) => {
-        this.state.setCareerProfile(
-          profile
-        );
-
         this.careerSetup.showNameInput(
           (name) => {
-            this.state.playerName =
-              name;
-
+            this.state.playerName = name;
+            this.state.setCareerProfile(profile);
             this.startWorkday();
           }
         );
