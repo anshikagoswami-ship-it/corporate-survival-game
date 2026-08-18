@@ -7,9 +7,9 @@ export default class MobileControls {
 
     this.joystickBase = null;
     this.joystickThumb = null;
-    this.interactButton = null;
 
     this.joystickPointerId = null;
+    this._nativeTouchId = null;
 
     this.joystickX = 0;
     this.joystickY = 0;
@@ -28,6 +28,29 @@ export default class MobileControls {
     }
 
     this.create();
+
+    // ─────────────────────────────────────
+    // BROWSER & OS EDGE CASES
+    // ─────────────────────────────────────
+    // Listen to window-level touch end/cancel. The browser always triggers these
+    // at the window level, even if iOS Safari swiping gestures hijack the event
+    // or the finger leaves the canvas bounds.
+    this._windowTouchHandler = (e) => this.handleWindowTouchEnd(e);
+    window.addEventListener('touchend', this._windowTouchHandler, { passive: true });
+    window.addEventListener('touchcancel', this._windowTouchHandler, { passive: true });
+
+    // Reset when tab visibility changes or window blurs
+    this._visibilityHandler = () => {
+      if (document.hidden) {
+        this.resetJoystick();
+      }
+    };
+    this._blurHandler = () => this.resetJoystick();
+    document.addEventListener('visibilitychange', this._visibilityHandler);
+    window.addEventListener('blur', this._blurHandler);
+
+    // Reset when the scene shuts down or restarts
+    this.scene.events.on('shutdown', this.resetJoystick, this);
   }
 
   create() {
@@ -77,69 +100,13 @@ export default class MobileControls {
     ]);
 
     // ─────────────────────────────────────
-    // INTERACT (ACT) BUTTON
-    // ─────────────────────────────────────
-
-    const buttonX = width - margin;
-    const buttonY = height - margin;
-
-    // Keep track of ACT position for our touch calculations.
-    this._actButtonX = buttonX;
-    this._actButtonY = buttonY;
-
-    const buttonBackground =
-      this.scene.add.circle(
-        buttonX,
-        buttonY,
-        36,
-        0x20B486,
-        0.9
-      );
-
-    buttonBackground.setStrokeStyle(
-      2,
-      0xFFFFFF,
-      0.5
-    );
-
-    const buttonText =
-      this.scene.add.text(
-        buttonX,
-        buttonY,
-        'ACT',
-        {
-          fontFamily:
-            'Arial, Helvetica, sans-serif',
-          fontSize: '12px',
-          color: '#FFFFFF',
-          fontStyle: 'bold',
-        }
-      ).setOrigin(0.5);
-
-    this.interactButton =
-      this.scene.add.zone(
-        buttonX,
-        buttonY,
-        82,
-        82
-      );
-
-    this.container.add([
-      buttonBackground,
-      buttonText,
-      this.interactButton,
-    ]);
-
-    // ─────────────────────────────────────
     // SCENE INPUT POINTER EVENTS
     // ─────────────────────────────────────
-    // Listening at the scene input level resolves Phaser 3 container input mapping
-    // issues when cameras are scrolled or scaled on mobile devices.
-
     this.scene.input.on('pointerdown', this.handlePointerDown, this);
     this.scene.input.on('pointermove', this.handlePointerMove, this);
     this.scene.input.on('pointerup', this.handlePointerUp, this);
     this.scene.input.on('pointercancel', this.handlePointerUp, this);
+    this.scene.input.on('gameout', this.handleGameOut, this);
   }
 
   handlePointerDown(pointer) {
@@ -147,26 +114,21 @@ export default class MobileControls {
       return;
     }
 
-    // 1. Check if touch is inside/near the joystick base
+    // Calculate distance to the joystick base screen position
     const dx = pointer.x - this.joystickBase.x;
     const dy = pointer.y - this.joystickBase.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
 
-    // We allow a slightly larger buffer (radius + 20px) for ease of touch acquisition.
+    // Allow a comfortable touch margin (radius + 20px)
     if (distance <= this.radius + 20) {
       this.joystickPointerId = pointer.id;
+
+      // Capture native touch identifier to safely track this specific finger
+      this._nativeTouchId = pointer.event && pointer.event.changedTouches && pointer.event.changedTouches[0]
+        ? pointer.event.changedTouches[0].identifier
+        : null;
+
       this.updateJoystick(pointer);
-      return;
-    }
-
-    // 2. Check if touch is inside/near the ACT button
-    const actDx = pointer.x - this._actButtonX;
-    const actDy = pointer.y - this._actButtonY;
-    const actDistance = Math.sqrt(actDx * actDx + actDy * actDy);
-
-    // 45px radius around the ACT button center
-    if (actDistance <= 45) {
-      this.handleActPress();
     }
   }
 
@@ -184,6 +146,37 @@ export default class MobileControls {
     }
 
     this.resetJoystick();
+  }
+
+  handleGameOut() {
+    // If the pointer leaves the Phaser canvas boundaries, defensively reset
+    this.resetJoystick();
+  }
+
+  handleWindowTouchEnd(event) {
+    if (this.joystickPointerId === null) {
+      return;
+    }
+
+    // 1. If there are no touches left on the screen, clear movement immediately
+    if (!event.touches || event.touches.length === 0) {
+      this.resetJoystick();
+      return;
+    }
+
+    // 2. Verify if our stashed native touch is still active
+    if (this._nativeTouchId !== null) {
+      let touchActive = false;
+      for (let i = 0; i < event.touches.length; i++) {
+        if (event.touches[i].identifier === this._nativeTouchId) {
+          touchActive = true;
+          break;
+        }
+      }
+      if (!touchActive) {
+        this.resetJoystick();
+      }
+    }
   }
 
   updateJoystick(pointer) {
@@ -212,36 +205,28 @@ export default class MobileControls {
   }
 
   resetJoystick() {
-    if (!this.joystickBase) {
-      return;
-    }
-
     this.joystickPointerId = null;
+    this._nativeTouchId = null;
 
     this.joystickX = 0;
     this.joystickY = 0;
 
-    this.joystickThumb.x = this.joystickBase.x;
-    this.joystickThumb.y = this.joystickBase.y;
-  }
-
-  handleActPress() {
-    if (
-      this.scene.eventModal &&
-      this.scene.eventModal.isOpen
-    ) {
-      return;
-    }
-
-    if (
-      typeof this.scene.interactNearby ===
-      'function'
-    ) {
-      this.scene.interactNearby();
+    if (this.joystickThumb && this.joystickBase) {
+      this.joystickThumb.x = this.joystickBase.x;
+      this.joystickThumb.y = this.joystickBase.y;
     }
   }
 
   getVector() {
+    // Defensive Check: If we have an active pointer ID, verify it is still registered
+    // and marked as down in Phaser's input manager.
+    if (this.joystickPointerId !== null) {
+      const activePointer = this.scene.input.pointers.find(p => p.id === this.joystickPointerId);
+      if (!activePointer || !activePointer.isDown) {
+        this.resetJoystick();
+      }
+    }
+
     return {
       x: this.joystickX,
       y: this.joystickY,
@@ -249,9 +234,15 @@ export default class MobileControls {
   }
 
   isActive() {
+    if (this.joystickPointerId !== null) {
+      const activePointer = this.scene.input.pointers.find(p => p.id === this.joystickPointerId);
+      if (!activePointer || !activePointer.isDown) {
+        this.resetJoystick();
+      }
+    }
     return (
-      Math.abs(this.joystickX) > 0.05 ||
-      Math.abs(this.joystickY) > 0.05
+      this.joystickPointerId !== null &&
+      (Math.abs(this.joystickX) > 0.05 || Math.abs(this.joystickY) > 0.05)
     );
   }
 
@@ -266,11 +257,19 @@ export default class MobileControls {
       return;
     }
 
-    // Clean up input listeners from the scene.
+    // Clean up window-level event listeners
+    window.removeEventListener('touchend', this._windowTouchHandler);
+    window.removeEventListener('touchcancel', this._windowTouchHandler);
+    document.removeEventListener('visibilitychange', this._visibilityHandler);
+    window.removeEventListener('blur', this._blurHandler);
+
+    // Clean up Phaser scene events
+    this.scene.events.off('shutdown', this.resetJoystick, this);
     this.scene.input.off('pointerdown', this.handlePointerDown, this);
     this.scene.input.off('pointermove', this.handlePointerMove, this);
     this.scene.input.off('pointerup', this.handlePointerUp, this);
     this.scene.input.off('pointercancel', this.handlePointerUp, this);
+    this.scene.input.off('gameout', this.handleGameOut, this);
 
     this.container.destroy(true);
     this.container = null;
