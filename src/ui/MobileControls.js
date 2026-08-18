@@ -3,45 +3,24 @@ import Phaser from 'phaser';
 export default class MobileControls {
   constructor(scene) {
     this.scene = scene;
-    this.container = null;
-
+    
     // D-pad state
     this.upPressed = false;
     this.downPressed = false;
     this.leftPressed = false;
     this.rightPressed = false;
 
-    this.upPointerId = null;
-    this.downPointerId = null;
-    this.leftPointerId = null;
-    this.rightPointerId = null;
-
-    this.upButton = null;
-    this.downButton = null;
-    this.leftButton = null;
-    this.rightButton = null;
-    this.centerCircle = null;
-
-    this.upText = null;
-    this.downText = null;
-    this.leftText = null;
-    this.rightText = null;
-
-    this.upZone = null;
-    this.downZone = null;
-    this.leftZone = null;
-    this.rightZone = null;
+    this.dpadElement = null;
 
     // Enable controls if the device supports touch OR if the physical
-    // viewport matches mobile/tablet dimensions. Using < 950px ensures
-    // the D-pad is created on mobile landscape screens.
+    // viewport matches mobile/tablet dimensions (< 950px).
     this.enabled =
       scene.sys.game.device.input.touch ||
       window.innerWidth < 950;
 
     console.log("MOBILE CONTROLS INITIALIZED");
-    console.log("Device Touch:", scene.sys.game.device.input.touch);
-    console.log("Window Width:", window.innerWidth);
+    console.log("Device Touch capability:", scene.sys.game.device.input.touch);
+    console.log("Window innerWidth:", window.innerWidth);
     console.log("Mobile Controls Enabled:", this.enabled);
 
     if (!this.enabled) {
@@ -53,10 +32,6 @@ export default class MobileControls {
     // ─────────────────────────────────────
     // BROWSER & OS EDGE CASES
     // ─────────────────────────────────────
-    this._windowTouchHandler = (e) => this.handleWindowTouchEnd(e);
-    window.addEventListener('touchend', this._windowTouchHandler, { passive: true });
-    window.addEventListener('touchcancel', this._windowTouchHandler, { passive: true });
-
     this._visibilityHandler = () => {
       if (document.hidden) {
         this.reset();
@@ -71,221 +46,197 @@ export default class MobileControls {
   }
 
   create() {
-    this.container = this.scene.add
-      .container(0, 0)
-      .setScrollFactor(0)
-      .setDepth(10000); // Exceedingly high depth to prevent overlaps
+    this.injectStyles();
 
-    console.log("DPAD CREATED");
-
-    const offset = 50;
-
-    // Center Anchor Dot
-    this.centerCircle = this.scene.add.circle(0, 0, 12, 0x173B67, 0.45);
-    this.centerCircle.setStrokeStyle(1.5, 0xFFFFFF, 0.35);
+    // Create D-pad container
+    this.dpadElement = document.createElement('div');
+    this.dpadElement.className = 'mobile-dpad';
 
     // Up Button
-    this.upButton = this.scene.add.graphics().setPosition(0, -offset);
-    this.drawButton(this.upButton, 'up', false);
-    this.upText = this.scene.add.text(0, -offset, '↑', {
-      fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '22px',
-      color: '#FFFFFF',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    const btnUp = document.createElement('button');
+    btnUp.className = 'dpad-up';
+    btnUp.textContent = '▲';
 
     // Down Button
-    this.downButton = this.scene.add.graphics().setPosition(0, offset);
-    this.drawButton(this.downButton, 'down', false);
-    this.downText = this.scene.add.text(0, offset, '↓', {
-      fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '22px',
-      color: '#FFFFFF',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    const btnDown = document.createElement('button');
+    btnDown.className = 'dpad-down';
+    btnDown.textContent = '▼';
 
     // Left Button
-    this.leftButton = this.scene.add.graphics().setPosition(-offset, 0);
-    this.drawButton(this.leftButton, 'left', false);
-    this.leftText = this.scene.add.text(-offset, 0, '←', {
-      fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '22px',
-      color: '#FFFFFF',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    const btnLeft = document.createElement('button');
+    btnLeft.className = 'dpad-left';
+    btnLeft.textContent = '◀';
 
     // Right Button
-    this.rightButton = this.scene.add.graphics().setPosition(offset, 0);
-    this.drawButton(this.rightButton, 'right', false);
-    this.rightText = this.scene.add.text(offset, 0, '→', {
-      fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '22px',
-      color: '#FFFFFF',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    const btnRight = document.createElement('button');
+    btnRight.className = 'dpad-right';
+    btnRight.textContent = '▶';
 
-    this.container.add([
-      this.centerCircle,
-      this.upButton, this.upText,
-      this.downButton, this.downText,
-      this.leftButton, this.leftText,
-      this.rightButton, this.rightText
-    ]);
+    // Center Anchor Dot decoration
+    const centerDot = document.createElement('div');
+    centerDot.className = 'dpad-center-dot';
 
-    // Position D-pad initially
-    this.updateLayout();
+    this.dpadElement.appendChild(btnUp);
+    this.dpadElement.appendChild(btnDown);
+    this.dpadElement.appendChild(btnLeft);
+    this.dpadElement.appendChild(btnRight);
+    this.dpadElement.appendChild(centerDot);
 
-    // ─────────────────────────────────────
-    // COMFORTABLE TOUCH TARGET INTERACTION ZONES
-    // ─────────────────────────────────────
-    const touchSize = 56;
+    // Mount D-pad directly to document.body to avoid clipping by #game-container overflows
+    document.body.appendChild(this.dpadElement);
 
-    this.upZone = this.scene.add.zone(0, -offset, touchSize, touchSize)
-      .setInteractive({ useHandCursor: true });
-    this.downZone = this.scene.add.zone(0, offset, touchSize, touchSize)
-      .setInteractive({ useHandCursor: true });
-    this.leftZone = this.scene.add.zone(-offset, 0, touchSize, touchSize)
-      .setInteractive({ useHandCursor: true });
-    this.rightZone = this.scene.add.zone(offset, 0, touchSize, touchSize)
-      .setInteractive({ useHandCursor: true });
+    // Register DOM Pointer Event handlers
+    this.setupButtonEvents(btnUp, 'up');
+    this.setupButtonEvents(btnDown, 'down');
+    this.setupButtonEvents(btnLeft, 'left');
+    this.setupButtonEvents(btnRight, 'right');
 
-    this.container.add([this.upZone, this.downZone, this.leftZone, this.rightZone]);
-
-    this.setupButtonEvents(this.upZone, 'up');
-    this.setupButtonEvents(this.downZone, 'down');
-    this.setupButtonEvents(this.leftZone, 'left');
-    this.setupButtonEvents(this.rightZone, 'right');
+    console.log("DOM D-PAD MOUNTED TO BODY SUCCESSFULLY");
   }
 
-  drawButton(graphics, key, isPressed) {
-    graphics.clear();
-    const btnSize = 46;
-    const radius = 10;
-
-    if (isPressed) {
-      graphics.fillStyle(0x2563D9, 0.85);
-      graphics.fillRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
-      graphics.lineStyle(2.5, 0xFFFFFF, 0.95);
-      graphics.strokeRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
-    } else {
-      graphics.fillStyle(0x173B67, 0.65); // Muted navy, translucent but highly visible
-      graphics.fillRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
-      graphics.lineStyle(2, 0xFFFFFF, 0.45);
-      graphics.strokeRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
+  injectStyles() {
+    if (document.getElementById('mobile-dpad-styles')) {
+      return;
     }
+
+    const style = document.createElement('style');
+    style.id = 'mobile-dpad-styles';
+    style.textContent = `
+      .mobile-dpad {
+        position: fixed;
+        width: 150px;
+        height: 150px;
+        z-index: 99999;
+        pointer-events: auto;
+        touch-action: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        user-select: none;
+        display: none; /* Controlled via setVisible() */
+      }
+
+      @media (orientation: landscape) {
+        .mobile-dpad {
+          left: 24px;
+          bottom: 24px;
+        }
+      }
+
+      @media (orientation: portrait) {
+        .mobile-dpad {
+          left: 20px;
+          bottom: 20px;
+        }
+      }
+
+      .mobile-dpad button {
+        position: absolute;
+        width: 46px;
+        height: 46px;
+        background: rgba(23, 59, 103, 0.75); /* Highly visible translucent deep navy */
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-radius: 10px;
+        color: #FFFFFF;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 22px;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        outline: none;
+        touch-action: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+        user-select: none;
+        transition: background 0.05s, border-color 0.05s;
+      }
+
+      /* Pressed / Active State */
+      .mobile-dpad button.pressed,
+      .mobile-dpad button:active {
+        background: rgba(37, 99, 217, 0.9); /* Primary blue */
+        border-color: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 0 10px rgba(37, 99, 217, 0.5);
+      }
+
+      .dpad-up {
+        left: 52px;
+        top: 2px;
+      }
+
+      .dpad-down {
+        left: 52px;
+        top: 102px;
+      }
+
+      .dpad-left {
+        left: 2px;
+        top: 52px;
+      }
+
+      .dpad-right {
+        left: 102px;
+        top: 52px;
+      }
+
+      .dpad-center-dot {
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        left: 67px;
+        top: 67px;
+        background: rgba(23, 59, 103, 0.75);
+        border: 1.5px solid rgba(255, 255, 255, 0.35);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+    `;
+    document.head.appendChild(style);
   }
 
-  setupButtonEvents(zone, dir) {
+  setupButtonEvents(btn, dir) {
     const propPressed = `${dir}Pressed`;
-    const propPointerId = `${dir}PointerId`;
-    const graphicsObj = this[`${dir}Button`];
 
-    zone.on('pointerdown', (pointer) => {
-      if (this[propPointerId] !== null) {
-        return;
+    const onPress = (e) => {
+      e.preventDefault();
+      
+      // Request pointer capture if supported to ensure release is captured outside button bounds
+      if (btn.setPointerCapture) {
+        try {
+          btn.setPointerCapture(e.pointerId);
+        } catch (err) {}
       }
 
       this[propPressed] = true;
-      this[propPointerId] = pointer.id;
+      btn.classList.add('pressed');
+    };
 
-      this.drawButton(graphicsObj, dir, true);
-    });
+    const onRelease = (e) => {
+      e.preventDefault();
 
-    zone.on('pointerup', (pointer) => {
-      if (pointer.id !== this[propPointerId]) {
-        return;
+      if (btn.releasePointerCapture) {
+        try {
+          btn.releasePointerCapture(e.pointerId);
+        } catch (err) {}
       }
 
       this[propPressed] = false;
-      this[propPointerId] = null;
+      btn.classList.remove('pressed');
+    };
 
-      this.drawButton(graphicsObj, dir, false);
-    });
-
-    zone.on('pointerout', (pointer) => {
-      if (pointer.id !== this[propPointerId]) {
-        return;
-      }
-
-      this[propPressed] = false;
-      this[propPointerId] = null;
-
-      this.drawButton(graphicsObj, dir, false);
-    });
-
-    zone.on('pointercancel', (pointer) => {
-      if (pointer.id !== this[propPointerId]) {
-        return;
-      }
-
-      this[propPressed] = false;
-      this[propPointerId] = null;
-
-      this.drawButton(graphicsObj, dir, false);
-    });
+    btn.addEventListener('pointerdown', onPress);
+    btn.addEventListener('pointerup', onRelease);
+    btn.addEventListener('pointercancel', onRelease);
+    btn.addEventListener('pointerout', onRelease);
   }
 
   updateLayout() {
-    if (!this.container) {
-      return;
-    }
-
+    // Media queries handle layout automatically. We just defensively reset
+    // inputs to ensure no active key survives a rotation event.
     this.reset();
-
-    const width = this.scene.scale.width;
-    const height = this.scene.scale.height;
-    const isPortrait = window.innerHeight > window.innerWidth;
-
-    // Use target screen-centered offsets:
-    // Landscape: cx = 100, cy = height - 100
-    // Portrait: cx = 85, cy = height - 100
-    const cx = isPortrait ? 85 : 100;
-    const cy = height - 100;
-
-    this.container.setPosition(cx, cy);
-
-    console.log("DPAD VIEWPORT UPDATE:");
-    console.log("Scale W:", width, "H:", height);
-    console.log("D-pad Position X:", cx, "Y:", cy);
-    console.log("DPAD VISIBLE:", this.container.visible);
-  }
-
-  handleWindowTouchEnd(event) {
-    if (!event.touches || event.touches.length === 0) {
-      this.reset();
-      return;
-    }
-
-    const dirs = ['up', 'down', 'left', 'right'];
-    dirs.forEach(dir => {
-      const propPointerId = `${dir}PointerId`;
-      const propPressed = `${dir}Pressed`;
-      const graphicsObj = this[`${dir}Button`];
-
-      if (this[propPointerId] !== null) {
-        const pointer = this.scene.input.pointers.find(p => p.id === this[propPointerId]);
-        const nativeId = pointer && pointer.event && pointer.event.changedTouches && pointer.event.changedTouches[0]
-          ? pointer.event.changedTouches[0].identifier
-          : null;
-
-        if (nativeId !== null) {
-          let touchActive = false;
-          for (let i = 0; i < event.touches.length; i++) {
-            if (event.touches[i].identifier === nativeId) {
-              touchActive = true;
-              break;
-            }
-          }
-          if (!touchActive) {
-            this[propPressed] = false;
-            this[propPointerId] = null;
-            if (graphicsObj) {
-              this.drawButton(graphicsObj, dir, false);
-            }
-          }
-        }
-      }
-    });
   }
 
   reset() {
@@ -294,15 +245,10 @@ export default class MobileControls {
     this.leftPressed = false;
     this.rightPressed = false;
 
-    this.upPointerId = null;
-    this.downPointerId = null;
-    this.leftPointerId = null;
-    this.rightPointerId = null;
-
-    if (this.upButton) this.drawButton(this.upButton, 'up', false);
-    if (this.downButton) this.drawButton(this.downButton, 'down', false);
-    if (this.leftButton) this.drawButton(this.leftButton, 'left', false);
-    if (this.rightButton) this.drawButton(this.rightButton, 'right', false);
+    if (this.dpadElement) {
+      const buttons = this.dpadElement.querySelectorAll('button');
+      buttons.forEach(btn => btn.classList.remove('pressed'));
+    }
   }
 
   resetJoystick() {
@@ -310,24 +256,6 @@ export default class MobileControls {
   }
 
   getVector() {
-    const dirs = ['up', 'down', 'left', 'right'];
-    dirs.forEach(dir => {
-      const propPointerId = `${dir}PointerId`;
-      const propPressed = `${dir}Pressed`;
-      const graphicsObj = this[`${dir}Button`];
-
-      if (this[propPointerId] !== null) {
-        const activePointer = this.scene.input.pointers.find(p => p.id === this[propPointerId]);
-        if (!activePointer || !activePointer.isDown) {
-          this[propPressed] = false;
-          this[propPointerId] = null;
-          if (graphicsObj) {
-            this.drawButton(graphicsObj, dir, false);
-          }
-        }
-      }
-    });
-
     let vx = 0;
     let vy = 0;
 
@@ -348,25 +276,24 @@ export default class MobileControls {
   }
 
   setVisible(visible) {
-    if (this.container) {
-      this.container.setVisible(visible);
+    if (this.dpadElement) {
+      this.dpadElement.style.display = visible ? 'block' : 'none';
+      if (!visible) {
+        this.reset();
+      }
     }
   }
 
   destroy() {
-    if (!this.container) {
-      return;
+    if (this.dpadElement) {
+      this.dpadElement.remove();
+      this.dpadElement = null;
     }
 
-    window.removeEventListener('touchend', this._windowTouchHandler);
-    window.removeEventListener('touchcancel', this._windowTouchHandler);
     document.removeEventListener('visibilitychange', this._visibilityHandler);
     window.removeEventListener('blur', this._blurHandler);
 
     this.scene.events.off('shutdown', this.reset, this);
     this.scene.scale.off('resize', this.updateLayout, this);
-
-    this.container.destroy(true);
-    this.container = null;
   }
 }
