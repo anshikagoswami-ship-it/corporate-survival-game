@@ -55,22 +55,22 @@ export default class MobileControls {
     // Up Button
     const btnUp = document.createElement('button');
     btnUp.className = 'dpad-up';
-    btnUp.textContent = '▲';
+    btnUp.textContent = '↑';
 
     // Down Button
     const btnDown = document.createElement('button');
     btnDown.className = 'dpad-down';
-    btnDown.textContent = '▼';
+    btnDown.textContent = '↓';
 
     // Left Button
     const btnLeft = document.createElement('button');
     btnLeft.className = 'dpad-left';
-    btnLeft.textContent = '◀';
+    btnLeft.textContent = '←';
 
     // Right Button
     const btnRight = document.createElement('button');
     btnRight.className = 'dpad-right';
-    btnRight.textContent = '▶';
+    btnRight.textContent = '→';
 
     // Center Anchor Dot decoration
     const centerDot = document.createElement('div');
@@ -104,8 +104,11 @@ export default class MobileControls {
     style.textContent = `
       .mobile-dpad {
         position: fixed;
-        width: 150px;
-        height: 150px;
+        width: 124px;
+        height: 124px;
+        background: rgba(23, 59, 103, 0.72); /* Translucent navy circle matching gameplay HUD theme */
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 50%;
         z-index: 99999;
         pointer-events: auto;
         touch-action: none;
@@ -113,32 +116,22 @@ export default class MobileControls {
         -webkit-touch-callout: none;
         user-select: none;
         display: none; /* Controlled via setVisible() */
-      }
-
-      @media (orientation: landscape) {
-        .mobile-dpad {
-          left: 24px;
-          bottom: 24px;
-        }
-      }
-
-      @media (orientation: portrait) {
-        .mobile-dpad {
-          left: 20px;
-          bottom: 20px;
-        }
+        
+        /* Auto position using viewport safe areas */
+        left: max(20px, env(safe-area-inset-left));
+        bottom: max(20px, env(safe-area-inset-bottom));
       }
 
       .mobile-dpad button {
         position: absolute;
-        width: 46px;
-        height: 46px;
-        background: rgba(23, 59, 103, 0.75); /* Highly visible translucent deep navy */
-        border: 2px solid rgba(255, 255, 255, 0.45);
-        border-radius: 10px;
-        color: #FFFFFF;
+        width: 48px;
+        height: 48px;
+        background: transparent;
+        border: none;
+        border-radius: 50%;
+        color: rgba(255, 255, 255, 0.9); /* Sharp white arrows */
         font-family: Arial, Helvetica, sans-serif;
-        font-size: 22px;
+        font-size: 18px;
         font-weight: bold;
         display: flex;
         justify-content: center;
@@ -151,45 +144,44 @@ export default class MobileControls {
         -webkit-user-select: none;
         -webkit-touch-callout: none;
         user-select: none;
-        transition: background 0.05s, border-color 0.05s;
+        transition: background 0.1s, transform 0.1s;
       }
 
-      /* Pressed / Active State */
+      /* Pressed / Active State: Subtle scaling and high-readability background tint */
       .mobile-dpad button.pressed,
       .mobile-dpad button:active {
-        background: rgba(37, 99, 217, 0.9); /* Primary blue */
-        border-color: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 0 10px rgba(37, 99, 217, 0.5);
+        background: rgba(255, 255, 255, 0.18) !important;
+        transform: scale(0.94);
       }
 
       .dpad-up {
-        left: 52px;
-        top: 2px;
+        left: 38px;
+        top: 0;
       }
 
       .dpad-down {
-        left: 52px;
-        top: 102px;
+        left: 38px;
+        top: 76px;
       }
 
       .dpad-left {
-        left: 2px;
-        top: 52px;
+        left: 0;
+        top: 38px;
       }
 
       .dpad-right {
-        left: 102px;
-        top: 52px;
+        left: 76px;
+        top: 38px;
       }
 
       .dpad-center-dot {
         position: absolute;
-        width: 16px;
-        height: 16px;
-        left: 67px;
-        top: 67px;
-        background: rgba(23, 59, 103, 0.75);
-        border: 1.5px solid rgba(255, 255, 255, 0.35);
+        width: 20px;
+        height: 20px;
+        left: 52px;
+        top: 52px;
+        background: rgba(255, 255, 255, 0.12);
+        border: 1px dashed rgba(255, 255, 255, 0.2);
         border-radius: 50%;
         pointer-events: none;
       }
@@ -234,8 +226,8 @@ export default class MobileControls {
   }
 
   updateLayout() {
-    // Media queries handle layout automatically. We just defensively reset
-    // inputs to ensure no active key survives a rotation event.
+    // Layout and positioning are managed automatically by safe area CSS rules.
+    // We just defensively reset D-pad status immediately to avoid stuck key triggers on rotate.
     this.reset();
   }
 
