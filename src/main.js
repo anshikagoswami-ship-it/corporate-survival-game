@@ -4,10 +4,18 @@ import OfficeScene from './scenes/OfficeScene.js';
 const config = {
   type: Phaser.AUTO,
 
-  width: 800,
-  height: 600,
-
   parent: 'game-container',
+
+  scale: {
+    // RESIZE: canvas fills the browser viewport exactly.
+    // On desktop this gives an 800x600ish window (or larger).
+    // On mobile portrait the canvas fills the phone screen with
+    // no letterbox bars.  scene.scale.width/height reflect the
+    // actual viewport so MobileControls and camera positioning
+    // are always correct.
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.NO_CENTER,
+  },
 
   dom: {
     createContainer: true,

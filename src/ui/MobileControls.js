@@ -14,11 +14,14 @@ export default class MobileControls {
     this.joystickX = 0;
     this.joystickY = 0;
 
-    this.radius = 58;
-    this.thumbRadius = 25;
+    this.radius = 62;
+    this.thumbRadius = 26;
 
+    // Enable controls if the device supports touch OR if the physical
+    // viewport is narrow (mobile simulator / DevTools device mode).
     this.enabled =
-      scene.sys.game.device.input.touch;
+      scene.sys.game.device.input.touch ||
+      window.innerWidth < 500;
 
     if (!this.enabled) {
       return;
@@ -28,7 +31,7 @@ export default class MobileControls {
   }
 
   create() {
-    const width = this.scene.scale.width;
+    const width  = this.scene.scale.width;
     const height = this.scene.scale.height;
 
     this.container = this.scene.add
@@ -40,8 +43,9 @@ export default class MobileControls {
     // JOYSTICK
     // ─────────────────────────────────────
 
-    const joystickX = 92;
-    const joystickY = height - 95;
+    const margin = this.radius + 18;
+    const joystickX = margin;
+    const joystickY = height - margin;
 
     this.joystickBase =
       this.scene.add.circle(
@@ -56,15 +60,6 @@ export default class MobileControls {
       2,
       0xFFFFFF,
       0.4
-    );
-
-    this.joystickBase.setInteractive(
-      new Phaser.Geom.Circle(
-        0,
-        0,
-        this.radius
-      ),
-      Phaser.Geom.Circle.Contains
     );
 
     this.joystickThumb =
@@ -82,11 +77,15 @@ export default class MobileControls {
     ]);
 
     // ─────────────────────────────────────
-    // INTERACT BUTTON
+    // INTERACT (ACT) BUTTON
     // ─────────────────────────────────────
 
-    const buttonX = width - 88;
-    const buttonY = height - 95;
+    const buttonX = width - margin;
+    const buttonY = height - margin;
+
+    // Keep track of ACT position for our touch calculations.
+    this._actButtonX = buttonX;
+    this._actButtonY = buttonY;
 
     const buttonBackground =
       this.scene.add.circle(
@@ -123,7 +122,7 @@ export default class MobileControls {
         buttonY,
         82,
         82
-      ).setInteractive();
+      );
 
     this.container.add([
       buttonBackground,
@@ -131,63 +130,48 @@ export default class MobileControls {
       this.interactButton,
     ]);
 
-    this.interactButton.on(
-      'pointerdown',
-      () => {
-        if (
-          this.scene.eventModal &&
-          this.scene.eventModal.isOpen
-        ) {
-          return;
-        }
-
-        if (
-          typeof this.scene.interactNearby ===
-          'function'
-        ) {
-          this.scene.interactNearby();
-        }
-      }
-    );
-
     // ─────────────────────────────────────
-    // JOYSTICK EVENTS
+    // SCENE INPUT POINTER EVENTS
     // ─────────────────────────────────────
+    // Listening at the scene input level resolves Phaser 3 container input mapping
+    // issues when cameras are scrolled or scaled on mobile devices.
 
-    this.joystickBase.on(
-      'pointerdown',
-      (pointer) => {
-        this.joystickPointerId =
-          pointer.id;
+    this.scene.input.on('pointerdown', this.handlePointerDown, this);
+    this.scene.input.on('pointermove', this.handlePointerMove, this);
+    this.scene.input.on('pointerup', this.handlePointerUp, this);
+    this.scene.input.on('pointercancel', this.handlePointerUp, this);
+  }
 
-        this.updateJoystick(pointer);
-      }
-    );
+  handlePointerDown(pointer) {
+    if (!this.joystickBase) {
+      return;
+    }
 
-    this.scene.input.on(
-      'pointermove',
-      this.handlePointerMove,
-      this
-    );
+    // 1. Check if touch is inside/near the joystick base
+    const dx = pointer.x - this.joystickBase.x;
+    const dy = pointer.y - this.joystickBase.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    this.scene.input.on(
-      'pointerup',
-      this.handlePointerUp,
-      this
-    );
+    // We allow a slightly larger buffer (radius + 20px) for ease of touch acquisition.
+    if (distance <= this.radius + 20) {
+      this.joystickPointerId = pointer.id;
+      this.updateJoystick(pointer);
+      return;
+    }
 
-    this.scene.input.on(
-      'pointercancel',
-      this.handlePointerUp,
-      this
-    );
+    // 2. Check if touch is inside/near the ACT button
+    const actDx = pointer.x - this._actButtonX;
+    const actDy = pointer.y - this._actButtonY;
+    const actDistance = Math.sqrt(actDx * actDx + actDy * actDy);
+
+    // 45px radius around the ACT button center
+    if (actDistance <= 45) {
+      this.handleActPress();
+    }
   }
 
   handlePointerMove(pointer) {
-    if (
-      pointer.id !==
-      this.joystickPointerId
-    ) {
+    if (pointer.id !== this.joystickPointerId) {
       return;
     }
 
@@ -195,10 +179,7 @@ export default class MobileControls {
   }
 
   handlePointerUp(pointer) {
-    if (
-      pointer.id !==
-      this.joystickPointerId
-    ) {
+    if (pointer.id !== this.joystickPointerId) {
       return;
     }
 
@@ -210,47 +191,24 @@ export default class MobileControls {
       return;
     }
 
-    const baseX =
-      this.joystickBase.x;
+    const baseX = this.joystickBase.x;
+    const baseY = this.joystickBase.y;
 
-    const baseY =
-      this.joystickBase.y;
+    let dx = pointer.x - baseX;
+    let dy = pointer.y - baseY;
 
-    let dx =
-      pointer.x - baseX;
+    const distance = Math.sqrt(dx * dx + dy * dy);
 
-    let dy =
-      pointer.y - baseY;
-
-    const distance =
-      Math.sqrt(
-        dx * dx +
-        dy * dy
-      );
-
-    if (
-      distance > this.radius
-    ) {
-      dx =
-        (dx / distance) *
-        this.radius;
-
-      dy =
-        (dy / distance) *
-        this.radius;
+    if (distance > this.radius) {
+      dx = (dx / distance) * this.radius;
+      dy = (dy / distance) * this.radius;
     }
 
-    this.joystickThumb.x =
-      baseX + dx;
+    this.joystickThumb.x = baseX + dx;
+    this.joystickThumb.y = baseY + dy;
 
-    this.joystickThumb.y =
-      baseY + dy;
-
-    this.joystickX =
-      dx / this.radius;
-
-    this.joystickY =
-      dy / this.radius;
+    this.joystickX = dx / this.radius;
+    this.joystickY = dy / this.radius;
   }
 
   resetJoystick() {
@@ -263,11 +221,24 @@ export default class MobileControls {
     this.joystickX = 0;
     this.joystickY = 0;
 
-    this.joystickThumb.x =
-      this.joystickBase.x;
+    this.joystickThumb.x = this.joystickBase.x;
+    this.joystickThumb.y = this.joystickBase.y;
+  }
 
-    this.joystickThumb.y =
-      this.joystickBase.y;
+  handleActPress() {
+    if (
+      this.scene.eventModal &&
+      this.scene.eventModal.isOpen
+    ) {
+      return;
+    }
+
+    if (
+      typeof this.scene.interactNearby ===
+      'function'
+    ) {
+      this.scene.interactNearby();
+    }
   }
 
   getVector() {
@@ -286,9 +257,7 @@ export default class MobileControls {
 
   setVisible(visible) {
     if (this.container) {
-      this.container.setVisible(
-        visible
-      );
+      this.container.setVisible(visible);
     }
   }
 
@@ -297,28 +266,13 @@ export default class MobileControls {
       return;
     }
 
-    this.scene.input.off(
-      'pointermove',
-      this.handlePointerMove,
-      this
-    );
+    // Clean up input listeners from the scene.
+    this.scene.input.off('pointerdown', this.handlePointerDown, this);
+    this.scene.input.off('pointermove', this.handlePointerMove, this);
+    this.scene.input.off('pointerup', this.handlePointerUp, this);
+    this.scene.input.off('pointercancel', this.handlePointerUp, this);
 
-    this.scene.input.off(
-      'pointerup',
-      this.handlePointerUp,
-      this
-    );
-
-    this.scene.input.off(
-      'pointercancel',
-      this.handlePointerUp,
-      this
-    );
-
-    this.container.destroy(
-      true
-    );
-
+    this.container.destroy(true);
     this.container = null;
   }
 }

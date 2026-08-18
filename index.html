@@ -2,27 +2,59 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Corporate Survival</title>
     <style>
-      * {
+      html, body {
         margin: 0;
         padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
         box-sizing: border-box;
+        background: #1e272e;
+      }
+      *, *::before, *::after {
+        box-sizing: inherit;
       }
       body {
-        background: linear-gradient(160deg, #1e272e 0%, #2f3542 50%, #1e272e 100%);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
         font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       }
       #game-container {
-        border: 3px solid #57606f;
-        border-radius: 8px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        /* Scale.RESIZE needs the parent to occupy the full viewport
+           so Phaser measures the correct available size. */
+        width: 100%;
+        height: 100%;
         overflow: hidden;
+      }
+      canvas {
+        display: block;
+        /* Prevent iOS from intercepting touch events for scrolling/zooming.
+           Without this, touchmove on the canvas may be swallowed by Safari
+           before reaching our window-level touch listeners. */
+        touch-action: none;
+      }
+      /* The Phaser DOM overlay div (injected by dom.createContainer:true)
+         must not intercept touch/pointer events — those belong to the canvas.
+         pointer-events:none lets touches fall through to the canvas element. */
+      #game-container > div {
+        pointer-events: none;
+      }
+      /* On desktop (wide screen), add the premium border framing */
+      @media (min-width: 600px) {
+        body {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          background: linear-gradient(160deg, #1e272e 0%, #2f3542 50%, #1e272e 100%);
+        }
+        #game-container {
+          width: auto;
+          height: auto;
+          border: 3px solid #57606f;
+          border-radius: 8px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
       }
     </style>
   </head>

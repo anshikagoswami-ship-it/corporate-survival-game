@@ -166,7 +166,13 @@ export default class OfficeScene extends Phaser.Scene {
       WORLD_H
     );
 
-    this.cameras.main.setZoom(1);
+    // Choose camera zoom based on the physical viewport.
+    // On desktop (≥500px wide) zoom=1 shows a 800×600 slice
+    // of the 1600×1200 world — the existing desktop experience.
+    // On mobile portrait we zoom out slightly so desks and
+    // characters are large enough to read without showing the
+    // entire tiny office at once.
+    this.applyMobileZoom();
 
     this.cameras.main.startFollow(
       this.player,
@@ -182,11 +188,37 @@ export default class OfficeScene extends Phaser.Scene {
       this.player.y
     );
 
+    // Re-apply zoom when the browser resizes (e.g. orientation change).
+    this.scale.on('resize', this.applyMobileZoom, this);
+
     this.refreshHUD();
 
     // Show career creation before
     // the workday begins.
     this.showCareerSetup();
+  }
+
+  // ─────────────────────────────────────────
+  // MOBILE ZOOM
+  // ─────────────────────────────────────────
+
+  applyMobileZoom() {
+    // Use window.innerWidth (physical pixels) to detect mobile portrait.
+    // scene.scale.width reflects the RESIZE canvas, which on desktop equals
+    // the container size — but window.innerWidth is the reliable physical check.
+    const isMobile = window.innerWidth < 500;
+
+    if (isMobile) {
+      // At zoom 0.65 on a 375px-wide phone:
+      //   visible world width  ≈ 375 / 0.65 ≈ 577 world-units
+      //   visible world height ≈ 667 / 0.65 ≈ 1026 world-units
+      // Desks (~80px) and the player (~24px) appear at readable sizes.
+      this.cameras.main.setZoom(0.65);
+    } else {
+      // Desktop: zoom=1, so a desktop window of e.g. 900×700 shows
+      // 900×700 world-units — same as the original experience.
+      this.cameras.main.setZoom(1);
+    }
   }
 
   // ─────────────────────────────────────────
@@ -453,6 +485,14 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   startWorkday() {
+    // Definitively close CareerSetup before gameplay begins.
+    // This is the last line of defense: even if submit() in showNameInput()
+    // already destroyed the container, calling close() again is safe
+    // (it checks for null before destroying).
+    if (this.careerSetup) {
+      this.careerSetup.close();
+    }
+
     const situation =
       WORKDAY_SITUATIONS[
         this.state.day
