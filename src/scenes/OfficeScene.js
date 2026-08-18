@@ -572,9 +572,9 @@ export default class OfficeScene extends Phaser.Scene {
     const shouldOverlay = isMobile && isPortrait;
 
     if (shouldOverlay) {
-      // Reset the joystick first to ensure no active touch vector is carried through
+      // Reset the D-pad first to ensure no active touch vector is carried through
       if (this.mobileControls) {
-        this.mobileControls.resetJoystick();
+        this.mobileControls.reset();
         this.mobileControls.setVisible(false);
       }
 
