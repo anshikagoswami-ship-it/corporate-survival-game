@@ -20,6 +20,7 @@ export default class MobileControls {
     this.downButton = null;
     this.leftButton = null;
     this.rightButton = null;
+    this.centerCircle = null;
 
     this.upText = null;
     this.downText = null;
@@ -32,10 +33,16 @@ export default class MobileControls {
     this.rightZone = null;
 
     // Enable controls if the device supports touch OR if the physical
-    // viewport is narrow (mobile simulator / DevTools device mode).
+    // viewport matches mobile/tablet dimensions. Using < 950px ensures
+    // the D-pad is created on mobile landscape screens.
     this.enabled =
       scene.sys.game.device.input.touch ||
-      window.innerWidth < 500;
+      window.innerWidth < 950;
+
+    console.log("MOBILE CONTROLS INITIALIZED");
+    console.log("Device Touch:", scene.sys.game.device.input.touch);
+    console.log("Window Width:", window.innerWidth);
+    console.log("Mobile Controls Enabled:", this.enabled);
 
     if (!this.enabled) {
       return;
@@ -46,14 +53,10 @@ export default class MobileControls {
     // ─────────────────────────────────────
     // BROWSER & OS EDGE CASES
     // ─────────────────────────────────────
-    // Listen to window-level touch end/cancel. The browser always triggers these
-    // at the window level, even if iOS Safari swiping gestures hijack the event
-    // or the finger leaves the canvas bounds.
     this._windowTouchHandler = (e) => this.handleWindowTouchEnd(e);
     window.addEventListener('touchend', this._windowTouchHandler, { passive: true });
     window.addEventListener('touchcancel', this._windowTouchHandler, { passive: true });
 
-    // Reset when tab visibility changes or window blurs
     this._visibilityHandler = () => {
       if (document.hidden) {
         this.reset();
@@ -63,10 +66,7 @@ export default class MobileControls {
     document.addEventListener('visibilitychange', this._visibilityHandler);
     window.addEventListener('blur', this._blurHandler);
 
-    // Reset when the scene shuts down or restarts
     this.scene.events.on('shutdown', this.reset, this);
-
-    // Reposition D-pad dynamically on viewport resize
     this.scene.scale.on('resize', this.updateLayout, this);
   }
 
@@ -74,19 +74,22 @@ export default class MobileControls {
     this.container = this.scene.add
       .container(0, 0)
       .setScrollFactor(0)
-      .setDepth(3000);
+      .setDepth(10000); // Exceedingly high depth to prevent overlaps
 
-    // ─────────────────────────────────────
-    // D-PAD BUTTONS & LABELS
-    // ─────────────────────────────────────
-    const offset = 52;
+    console.log("DPAD CREATED");
+
+    const offset = 50;
+
+    // Center Anchor Dot
+    this.centerCircle = this.scene.add.circle(0, 0, 12, 0x173B67, 0.45);
+    this.centerCircle.setStrokeStyle(1.5, 0xFFFFFF, 0.35);
 
     // Up Button
     this.upButton = this.scene.add.graphics().setPosition(0, -offset);
     this.drawButton(this.upButton, 'up', false);
-    this.upText = this.scene.add.text(0, -offset, '▲', {
+    this.upText = this.scene.add.text(0, -offset, '↑', {
       fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '20px',
+      fontSize: '22px',
       color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -94,9 +97,9 @@ export default class MobileControls {
     // Down Button
     this.downButton = this.scene.add.graphics().setPosition(0, offset);
     this.drawButton(this.downButton, 'down', false);
-    this.downText = this.scene.add.text(0, offset, '▼', {
+    this.downText = this.scene.add.text(0, offset, '↓', {
       fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '20px',
+      fontSize: '22px',
       color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -104,9 +107,9 @@ export default class MobileControls {
     // Left Button
     this.leftButton = this.scene.add.graphics().setPosition(-offset, 0);
     this.drawButton(this.leftButton, 'left', false);
-    this.leftText = this.scene.add.text(-offset, 0, '◀', {
+    this.leftText = this.scene.add.text(-offset, 0, '←', {
       fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '20px',
+      fontSize: '22px',
       color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -114,14 +117,15 @@ export default class MobileControls {
     // Right Button
     this.rightButton = this.scene.add.graphics().setPosition(offset, 0);
     this.drawButton(this.rightButton, 'right', false);
-    this.rightText = this.scene.add.text(offset, 0, '▶', {
+    this.rightText = this.scene.add.text(offset, 0, '→', {
       fontFamily: 'Arial, Helvetica, sans-serif',
-      fontSize: '20px',
+      fontSize: '22px',
       color: '#FFFFFF',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.container.add([
+      this.centerCircle,
       this.upButton, this.upText,
       this.downButton, this.downText,
       this.leftButton, this.leftText,
@@ -132,7 +136,7 @@ export default class MobileControls {
     this.updateLayout();
 
     // ─────────────────────────────────────
-    // INTERACTIVE TOUCH ZONES (COMFORTABLE TARGETS)
+    // COMFORTABLE TOUCH TARGET INTERACTION ZONES
     // ─────────────────────────────────────
     const touchSize = 56;
 
@@ -147,7 +151,6 @@ export default class MobileControls {
 
     this.container.add([this.upZone, this.downZone, this.leftZone, this.rightZone]);
 
-    // Register button event handlers
     this.setupButtonEvents(this.upZone, 'up');
     this.setupButtonEvents(this.downZone, 'down');
     this.setupButtonEvents(this.leftZone, 'left');
@@ -160,16 +163,14 @@ export default class MobileControls {
     const radius = 10;
 
     if (isPressed) {
-      // Pressed state: primary blue, translucent with crisp white border
       graphics.fillStyle(0x2563D9, 0.85);
       graphics.fillRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
       graphics.lineStyle(2.5, 0xFFFFFF, 0.95);
       graphics.strokeRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
     } else {
-      // Normal state: translucent deep navy with subtle white outline
-      graphics.fillStyle(0x173B67, 0.45);
+      graphics.fillStyle(0x173B67, 0.65); // Muted navy, translucent but highly visible
       graphics.fillRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
-      graphics.lineStyle(2, 0xFFFFFF, 0.35);
+      graphics.lineStyle(2, 0xFFFFFF, 0.45);
       graphics.strokeRoundedRect(-btnSize / 2, -btnSize / 2, btnSize, btnSize, radius);
     }
   }
@@ -180,7 +181,6 @@ export default class MobileControls {
     const graphicsObj = this[`${dir}Button`];
 
     zone.on('pointerdown', (pointer) => {
-      // Prevent other pointers from hijacking this direction if already pressed
       if (this[propPointerId] !== null) {
         return;
       }
@@ -230,29 +230,32 @@ export default class MobileControls {
       return;
     }
 
-    // Reset D-pad status immediately to avoid stuck key triggers on rotate
     this.reset();
 
+    const width = this.scene.scale.width;
     const height = this.scene.scale.height;
+    const isPortrait = window.innerHeight > window.innerWidth;
 
-    // Place the D-pad in bottom-left corner (size 150px layout bounds)
-    const margin = 20;
-    const radius = 75; // Bounding radius for 150px D-pad size
-
-    const cx = margin + radius;
-    const cy = height - margin - radius;
+    // Use target screen-centered offsets:
+    // Landscape: cx = 100, cy = height - 100
+    // Portrait: cx = 85, cy = height - 100
+    const cx = isPortrait ? 85 : 100;
+    const cy = height - 100;
 
     this.container.setPosition(cx, cy);
+
+    console.log("DPAD VIEWPORT UPDATE:");
+    console.log("Scale W:", width, "H:", height);
+    console.log("D-pad Position X:", cx, "Y:", cy);
+    console.log("DPAD VISIBLE:", this.container.visible);
   }
 
   handleWindowTouchEnd(event) {
-    // 1. If there are no touches left on the screen, clear all directions immediately
     if (!event.touches || event.touches.length === 0) {
       this.reset();
       return;
     }
 
-    // 2. Verify stashed touch identifiers to see if any have been released by Safari gesture interceptions
     const dirs = ['up', 'down', 'left', 'right'];
     dirs.forEach(dir => {
       const propPointerId = `${dir}PointerId`;
@@ -302,13 +305,11 @@ export default class MobileControls {
     if (this.rightButton) this.drawButton(this.rightButton, 'right', false);
   }
 
-  // Alias for backward compatibility with orientation overlays or old code
   resetJoystick() {
     this.reset();
   }
 
   getVector() {
-    // Verify stashed pointer states inside Phaser input manager to prevent stuck key drift
     const dirs = ['up', 'down', 'left', 'right'];
     dirs.forEach(dir => {
       const propPointerId = `${dir}PointerId`;
@@ -357,13 +358,11 @@ export default class MobileControls {
       return;
     }
 
-    // Clean up window-level event listeners
     window.removeEventListener('touchend', this._windowTouchHandler);
     window.removeEventListener('touchcancel', this._windowTouchHandler);
     document.removeEventListener('visibilitychange', this._visibilityHandler);
     window.removeEventListener('blur', this._blurHandler);
 
-    // Clean up Phaser scene events
     this.scene.events.off('shutdown', this.reset, this);
     this.scene.scale.off('resize', this.updateLayout, this);
 
