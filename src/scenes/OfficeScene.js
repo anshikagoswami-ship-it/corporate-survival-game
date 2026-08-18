@@ -203,21 +203,21 @@ export default class OfficeScene extends Phaser.Scene {
   // ─────────────────────────────────────────
 
   applyMobileZoom() {
-    // Use window.innerWidth (physical pixels) to detect mobile portrait.
-    // scene.scale.width reflects the RESIZE canvas, which on desktop equals
-    // the container size — but window.innerWidth is the reliable physical check.
-    const isMobile = window.innerWidth < 500;
+    const isMobile = this.sys.game.device.input.touch || window.innerWidth < 950;
 
     if (isMobile) {
-      // At zoom 0.65 on a 375px-wide phone:
-      //   visible world width  ≈ 375 / 0.65 ≈ 577 world-units
-      //   visible world height ≈ 667 / 0.65 ≈ 1026 world-units
-      // Desks (~80px) and the player (~24px) appear at readable sizes.
-      this.cameras.main.setZoom(0.65);
+      const isPortrait = window.innerHeight > window.innerWidth;
+      if (isPortrait) {
+        // Portrait (setup phase)
+        this.cameras.main.setZoom(1.0);
+      } else {
+        // Landscape (gameplay phase)
+        // Zooming to 1.2 makes characters, desks, and interaction details large and readable
+        this.cameras.main.setZoom(1.2);
+      }
     } else {
-      // Desktop: zoom=1, so a desktop window of e.g. 900×700 shows
-      // 900×700 world-units — same as the original experience.
-      this.cameras.main.setZoom(1);
+      // Desktop
+      this.cameras.main.setZoom(1.0);
     }
   }
 
@@ -541,6 +541,11 @@ export default class OfficeScene extends Phaser.Scene {
       return;
     }
 
+    // Check if device orientation is incorrect for gameplay (mobile portrait -> pause)
+    if (this.checkAndHandleOrientation()) {
+      return;
+    }
+
     this.state.tickClock(
       delta
     );
@@ -558,6 +563,126 @@ export default class OfficeScene extends Phaser.Scene {
     this.checkWinLose();
 
     this.refreshHUD();
+  }
+
+  // ─────────────────────────────────────────
+  // ORIENTATION PAUSE MANAGEMENT
+  // ─────────────────────────────────────────
+
+  checkAndHandleOrientation() {
+    const isMobile = this.sys.game.device.input.touch || window.innerWidth < 950;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const shouldOverlay = isMobile && isPortrait;
+
+    if (shouldOverlay) {
+      // Reset the joystick first to ensure no active touch vector is carried through
+      if (this.mobileControls) {
+        this.mobileControls.resetJoystick();
+        this.mobileControls.setVisible(false);
+      }
+
+      if (this.hud && this.hud.hudContainer) {
+        this.hud.hudContainer.setVisible(false);
+      }
+
+      // Stop player physics velocities during pause
+      if (this.player && this.player.body) {
+        this.player.body.setVelocity(0);
+      }
+
+      if (!this.orientationOverlay) {
+        this.createOrientationOverlay();
+      }
+      return true;
+    } else {
+      // Restore gameplay layout
+      if (this.orientationOverlay) {
+        this.orientationOverlay.destroy();
+        this.orientationOverlay = null;
+
+        // Reposition layout and update zooms
+        this.applyMobileZoom();
+        if (this.hud) {
+          this.hud.handleResize();
+        }
+        if (this.mobileControls) {
+          this.mobileControls.updateLayout();
+          this.mobileControls.setVisible(true);
+        }
+      }
+
+      if (this.hud && this.hud.hudContainer && !this.hud.hudContainer.visible) {
+        this.hud.hudContainer.setVisible(true);
+      }
+      if (this.mobileControls && this.mobileControls.container && !this.mobileControls.container.visible) {
+        this.mobileControls.setVisible(true);
+      }
+      return false;
+    }
+  }
+
+  createOrientationOverlay() {
+    const screenW = this.scale.width;
+    const screenH = this.scale.height;
+    const cx = screenW / 2;
+    const cy = screenH / 2;
+
+    this.orientationOverlay = this.add.container(0, 0)
+      .setScrollFactor(0)
+      .setDepth(5000);
+
+    // Deep Navy overlay background (#173B67)
+    const bg = this.add.rectangle(cx, cy, screenW, screenH, 0x173B67, 1);
+    this.orientationOverlay.add(bg);
+
+    // Draw vector phone rotation illustration using Phaser graphics
+    const graphics = this.add.graphics();
+    graphics.lineStyle(2, 0xFFFFFF, 0.85);
+
+    // Phone body in portrait shape
+    const phoneW = 44;
+    const phoneH = 76;
+    graphics.strokeRoundedRect(cx - phoneW / 2, cy - 50 - phoneH / 2, phoneW, phoneH, 8);
+    // Home button dot
+    graphics.fillStyle(0xFFFFFF, 0.85);
+    graphics.fillCircle(cx, cy - 50 + phoneH / 2 - 8, 3.5);
+
+    // Curved rotation indicator arc
+    graphics.lineStyle(3, 0x2563D9, 1); // Primary Blue accent
+    graphics.beginPath();
+    graphics.arc(cx, cy - 50, 56, Phaser.Math.DegToRad(-40), Phaser.Math.DegToRad(40));
+    graphics.strokePath();
+    this.orientationOverlay.add(graphics);
+
+    // Header label
+    const title = this.add.text(cx, cy + 24, 'ROTATE TO SURVIVE', {
+      fontFamily: FONT,
+      fontSize: '20px',
+      color: '#FFFFFF',
+      fontStyle: 'bold',
+      letterSpacing: 2
+    }).setOrigin(0.5);
+
+    // Instruction label
+    const label = this.add.text(cx, cy + 54, 'Turn your phone sideways to get back to work.', {
+      fontFamily: FONT,
+      fontSize: '12px',
+      color: '#A3BFDF',
+      align: 'center',
+      wordWrap: { width: screenW - 40 }
+    }).setOrigin(0.5);
+
+    // Cynical subtitle label
+    const sub = this.add.text(cx, cy + 78, 'The office is wider than your patience.', {
+      fontFamily: FONT,
+      fontSize: '10px',
+      color: '#93C5FD',
+      fontStyle: 'italic',
+      align: 'center',
+      wordWrap: { width: screenW - 40 }
+    }).setOrigin(0.5);
+
+    this.orientationOverlay.add([title, label, sub]);
   }
 
   // ─────────────────────────────────────────
